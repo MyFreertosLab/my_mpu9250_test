@@ -1,0 +1,70 @@
+// From: https://www.esp32.com/viewtopic.php?t=7754
+
+//This function is called with every interrupt
+static void IRAM_ATTR mpu_isr(void *discard)
+{
+  spi_transaction_t t = {};
+  uint8_t tx_buffer[2] = {0x00, 0x00};
+  t.length = 2 * 8;
+  t.flags = SPI_TRANS_USE_RXDATA; 
+  t.tx_buffer = tx_buffer;
+  t.cmd = MPUREG_ACCEL_XOUT_H | READ_FLAG;                                      
+  spi_device_queue_trans(mpu9250_spi_handle, &t, 0);
+}
+
+void task_mpu9250(void *pvParameters)
+{
+  // Create a queue capable of containing 20 int16 values.
+  data_queue = xQueueCreate(20, sizeof(int16_t));
+
+  mpu9250_init_spi();
+  // Check if connection to Sensor is ok
+  if (mpu9250_whoami())
+  {
+    mpu9250_init();
+    gpio_set_intr_type(PIN_MPU_INT, GPIO_INTR_NEGEDGE); 
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(PIN_MPU_INT, mpu_isr, (void *)PIN_MPU_INT);
+  }
+  vTaskDelete(NULL);
+}
+
+// This is called as a post SPI transaction 
+static void IRAM_ATTR mpu9250_post_spi_trans(spi_transaction_t *t)
+{
+  BaseType_t xHigherPriorityTaskWoken;
+
+  if (t->cmd == (MPUREG_ACCEL_XOUT_H | READ_FLAG))
+  {
+    //Writes x-values into data_buffer and sends them to the queue
+    data_buffer = ((int16_t)t->rx_data[0] << 8) | t->rx_data[1];
+    xQueueSendToBackFromISR(data_queue, &data_buffer, &xHigherPriorityTaskWoken);
+  }
+}
+
+void mpu9250_init_spi()
+{
+  esp_err_t ret;
+  spi_bus_config_t buscfg = {.miso_io_num = PIN_SPI_SDI,
+                             .mosi_io_num = PIN_SPI_SDO,
+                             .sclk_io_num = PIN_SPI_SCK,
+                             .quadwp_io_num = -1,
+                             .quadhd_io_num = -1};
+  spi_device_interface_config_t devcfg = {
+      .command_bits = 8,                
+      .dummy_bits = 0,                  
+      .mode = 3,                        
+      .clock_speed_hz = 1000000,       
+      .spics_io_num = PIN_MPU_CS,     
+      .queue_size = 7,                 
+      .post_cb = mpu9250_post_spi_trans 
+                                       
+                                        
+  };
+  ret = spi_bus_initialize(HSPI_HOST, &buscfg, 1); 
+  assert(ret == ESP_OK);
+  ESP_LOGI(TAG, "... Initializing bus.");
+  ret = spi_bus_add_device(HSPI_HOST, &devcfg, &mpu9250_spi_handle);
+  assert(ret == ESP_OK);
+  ESP_LOGI(TAG, "... Adding device bus.");
+}
