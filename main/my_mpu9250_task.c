@@ -64,17 +64,14 @@ void my_mpu9250_task_init(spi_device_handle_t* spi) {
 
 esp_err_t my_mpu9250_task_keep_alive(spi_device_handle_t spi) {
     esp_err_t ret;
-    uint8_t tx_buffer[2] = {0x00, 0x00};
     spi_transaction_t t;
     printf("Keep Alive ...\n");
     memset(&t, 0, sizeof(t));       //Zero out the transaction
-    t.length=16;                    //Transaction length is in bits.
-    t.cmd=(0x80 | MPU_6500_SPI_WHOAMI_REGISTER);
+    t.length=8;                    //Transaction length is in bits.
+    t.addr=(0x80 | MPU_6500_SPI_WHOAMI_REGISTER);
     t.flags=SPI_TRANS_USE_RXDATA;
-    t.tx_buffer=tx_buffer;
     ret=spi_device_polling_transmit(spi, &t);  //Transmit!
     if(ret == ESP_OK) {
-        uint8_t value = *(uint8_t*)t.rx_data;
         printf("MPU9250 ID: [%d][bits: %d]\n", (t.rx_data[0]), t.rxlength);
     } else {
     	printf("ERROR: [%d]\n", ret);
@@ -96,8 +93,8 @@ void my_mpu9250_task(void *arg) {
     };
     spi_device_interface_config_t devcfg={
     	.spics_io_num=PIN_NUM_CS,
-        .clock_speed_hz=1000000, //Clock out at 20 MHz
-		.command_bits=8,
+        .clock_speed_hz=SPI_MASTER_FREQ_20M, //Clock out at 20 MHz
+		.address_bits=8,
         .mode=3,                                //SPI mode 3
         .queue_size=7                           //We want to be able to queue 7 transactions at a time
     };
