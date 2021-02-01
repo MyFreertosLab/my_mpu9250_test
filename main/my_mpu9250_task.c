@@ -68,8 +68,9 @@ void my_mpu9250_task(void *arg) {
 	my_mpu9250_task_init(mpu9250_handle);
 
 	while (true) {
-		//mpu9250_whoami(mpu9250_handle);
-		mpu9250_get_data(NULL, NULL);
-		vTaskDelay(20);
+	    if(xSemaphoreTake(((mpu9250_handle_t)mpu9250_handle)->spi_mutex, portMAX_DELAY) == pdTRUE) {
+			mpu9250_get_int_status(mpu9250_handle);
+			mpu9250_whoami(mpu9250_handle);
+	    }
 	}
 }
