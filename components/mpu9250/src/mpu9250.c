@@ -58,19 +58,22 @@ static esp_err_t mpu9250_write8(mpu9250_handle_t mpu9250_handle, uint8_t reg, ui
 }
 
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
-	printf("PREPARE GPIO [%d]\n", mpu9250_handle->int_pin);
 	mpu9250_handle->data_ready_task_handle=xTaskGetCurrentTaskHandle();
 
     // set Configuration Register
+	printf("MPU9250: Gyro bandwidth 184Hz\n");
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_CONFIG, 0x01)); // gyro bandwidth 184Hz
 
     // set Gyro Configuration Register
+	printf("MPU9250: Gyro +-250deg/sec\n");
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_GYRO_CONFIG, 0x0)); // +-250deg/sec
 
     // set Acc Conf1 Register
+	printf("MPU9250: Accel +-4g\n");
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_ACCEL_CONFIG, 0x01)); // +-4g
 
     // set Acc Conf2 Register
+	printf("MPU9250: Accel bandwidth 92Hz\n");
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_ACCEL_CONFIG_2, 0x02)); // bandwidth 92Hz
 
     // set PwrMgmt2 Register
@@ -83,9 +86,11 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_STATUS, 0x00)); // reset all interrupts?
 
     // set Int Enable Register
+	printf("MPU9250: Enable Interrupts\n");
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_ENABLE, 0x01)); // data ready int
 
 	// prepare GPIO Interrupt
+	printf("MPU9250: Gpio interrupt pin [%d]\n", mpu9250_handle->int_pin);
     gpio_config_t io_conf={
         .intr_type=GPIO_PIN_INTR_POSEDGE,
         .mode=GPIO_MODE_INPUT,
@@ -93,10 +98,13 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
         .pin_bit_mask=(1<<mpu9250_handle->int_pin)
     };
     gpio_config(&io_conf);
+	printf("MPU9250: Gpio interrupt pin configured\n");
 
+	printf("MPU9250: Configuring gpio interrupts ....\n");
 	ESP_ERROR_CHECK(gpio_set_intr_type(mpu9250_handle->int_pin, GPIO_PIN_INTR_POSEDGE));
 	ESP_ERROR_CHECK(gpio_install_isr_service(0));
 	ESP_ERROR_CHECK(gpio_isr_handler_add(mpu9250_handle->int_pin, mpu9250_isr, (void*)mpu9250_handle));
+	printf("MPU9250: Gpio interrupts configured ..\n");
 
     return ESP_OK;
 }

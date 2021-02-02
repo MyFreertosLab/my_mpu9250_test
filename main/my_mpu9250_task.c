@@ -34,6 +34,9 @@
 
 
 void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
+    memset(mpu9250->buscfg, 0, sizeof(spi_bus_config_t));
+    memset(mpu9250->devcfg, 0, sizeof(spi_device_interface_config_t));
+
 	mpu9250->buscfg->miso_io_num = PIN_NUM_MISO;
 	mpu9250->buscfg->mosi_io_num = PIN_NUM_MOSI;
 	mpu9250->buscfg->sclk_io_num = PIN_NUM_CLK;
@@ -46,10 +49,22 @@ void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
 	mpu9250->devcfg->address_bits = 8;
 	mpu9250->devcfg->mode = 3; //SPI mode 3
 	mpu9250->devcfg->queue_size = 7;  //We want to be able to queue 7 transactions at a time
+	mpu9250->devcfg->flags = 0;
+	mpu9250->devcfg->cs_ena_pretrans = 0;
 
 	mpu9250->int_pin=PIN_NUM_INT;
 
 	printf("SIZEOF MPU9250 [%d]\n", sizeof(*mpu9250));
+	printf("SIZEOF BUSCFG [%d]\n", sizeof(*(mpu9250->buscfg)));
+	printf("SIZEOF INTR FLAGS [%d]\n", mpu9250->buscfg->intr_flags);
+	printf("SIZEOF DEVCFG [%d]\n", sizeof(*(mpu9250->devcfg)));
+	printf("MISO: [%d]\n", mpu9250->buscfg->miso_io_num);
+	printf("MOSI: [%d]\n", mpu9250->buscfg->mosi_io_num);
+	printf("CS: [%d]\n", mpu9250->devcfg->spics_io_num);
+	printf("FREQ: [%d]\n", mpu9250->devcfg->clock_speed_hz);
+	printf("FLAGS: [%d]\n", mpu9250->devcfg->flags);
+	printf("PRETRANS: [%d]\n", mpu9250->devcfg->cs_ena_pretrans);
+	printf("POSTTRANS: [%d]\n", mpu9250->devcfg->cs_ena_posttrans);
 
 	//Initialize the SPI bus
 	ESP_ERROR_CHECK(spi_bus_initialize(MY_SPI_MPU9250_HOST, mpu9250->buscfg, 0));
@@ -77,20 +92,22 @@ void my_mpu9250_task(void *arg) {
 	// Init MPU9250
 	my_mpu9250_task_init(mpu9250_handle);
 
-	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 200 );
+	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
 	uint32_t counter = 0;
 	while (true) {
+		counter++;
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
 			mpu9250_load_int_status(mpu9250_handle);
 			mpu9250_load_raw_data(mpu9250_handle);
-			counter++;
 			if(counter%100 == 0) {
 				printf("%d\n", counter);
 			}
 	    } else {
 	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
-	    	printf("SORRY!! Interrupt LOST!\n");
+			if(counter%100 == 0) {
+		    	printf("SORRY!! Interrupt LOST!\n");
+			}
 	    }
 	}
 }

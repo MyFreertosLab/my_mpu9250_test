@@ -317,8 +317,7 @@ typedef struct mpu9250_init_s {
     // MPU9250 id
     uint8_t whoami;
 
-    // TODO: DA rivedere .. se aumento a 27 non funziona più SPI (fino a sizeof=112, poi passa a 116)??
-//    uint8_t raw_data[26];
+    mpu9250_raw_data_t raw_data;
 
 //    // raw data
 //    mpu9250_raw_data_t mpu9250_raw_data_buff;
