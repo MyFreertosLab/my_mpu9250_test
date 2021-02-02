@@ -57,6 +57,17 @@ static esp_err_t mpu9250_write8(mpu9250_handle_t mpu9250_handle, uint8_t reg, ui
 	return ret;
 }
 
+static esp_err_t mpu9250_read_buff(mpu9250_handle_t mpu9250_handle, uint8_t reg, void* buff, uint8_t length) {
+	esp_err_t ret;
+	spi_transaction_t t;
+	memset(&t, 0, sizeof(t));       //Zero out the transaction
+	t.length = length;                    //Transaction length is in bits.
+	t.addr = (MPU9250_READ_FLAG | reg);
+	t.rx_buffer=buff;
+	ret = spi_device_polling_transmit(((mpu9250_handle_t)mpu9250_handle)->device_handle, &t);  //Transmit!
+	return ret;
+}
+
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->data_ready_task_handle=xTaskGetCurrentTaskHandle();
 
@@ -132,5 +143,8 @@ esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle) {
 }
 
 esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
-    return ESP_OK;
+	uint8_t buff[26];
+	esp_err_t ret = mpu9250_read_buff(mpu9250_handle, MPU9250_ACCEL_XOUT_H, buff, 26);
+	mpu9250_handle->raw_data.data_s_xyz.accel_data_x = (buff[0] << 8) + buff[1];
+	return ret;
 }

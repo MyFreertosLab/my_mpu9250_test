@@ -282,22 +282,22 @@ enum clock_sel_e {
 ********** MPU9250 API ***********
 *********************************/
 typedef union {
-   uint8_t all[26];
+   int8_t all[26];
    struct {
-     uint16_t accel[3];
-     uint16_t temp;
-     uint16_t gyro[3];
-     uint16_t ext[12];
+     int16_t accel[3];
+     int16_t temp;
+     int16_t gyro[3];
+     int16_t ext[12];
    } data_s_vector;
    struct {
-     uint16_t accel_data_x;
-     uint16_t accel_data_y;
-     uint16_t accel_data_z;
-     uint16_t temp_data;
-     uint16_t gyro_data_x;
-     uint16_t gyro_data_y;
-     uint16_t gyro_data_z;
-     uint16_t ext_data[12];
+     int16_t accel_data_x;
+     int16_t accel_data_y;
+     int16_t accel_data_z;
+     int16_t temp_data;
+     int16_t gyro_data_x;
+     int16_t gyro_data_y;
+     int16_t gyro_data_z;
+     int16_t ext_data[12];
    } data_s_xyz;
 } mpu9250_raw_data_t;
 typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;

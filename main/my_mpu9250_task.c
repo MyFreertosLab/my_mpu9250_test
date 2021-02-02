@@ -91,10 +91,10 @@ void my_mpu9250_task(void *arg) {
 	while (true) {
 		counter++;
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
-			mpu9250_load_int_status(mpu9250_handle);
-			mpu9250_load_raw_data(mpu9250_handle);
+			ESP_ERROR_CHECK(mpu9250_load_int_status(mpu9250_handle));
+			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 			if(counter%100 == 0) {
-				printf("%d\n", counter);
+				printf("Accel_X_H/L/V [%d][%d][%d]\n", mpu9250_handle->raw_data.all[0],mpu9250_handle->raw_data.all[1], mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
 			}
 	    } else {
 	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
