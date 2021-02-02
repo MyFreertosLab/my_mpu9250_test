@@ -34,43 +34,42 @@
 
 
 void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
-    memset(mpu9250->buscfg, 0, sizeof(spi_bus_config_t));
-    memset(mpu9250->devcfg, 0, sizeof(spi_device_interface_config_t));
+    memset(mpu9250, 0, sizeof(mpu9250_init_t));
+    memset(&mpu9250->buscfg, 0, sizeof(spi_bus_config_t));
+    memset(&mpu9250->devcfg, 0, sizeof(spi_device_interface_config_t));
 
-	mpu9250->buscfg->miso_io_num = PIN_NUM_MISO;
-	mpu9250->buscfg->mosi_io_num = PIN_NUM_MOSI;
-	mpu9250->buscfg->sclk_io_num = PIN_NUM_CLK;
-	mpu9250->buscfg->quadwp_io_num = -1;
-	mpu9250->buscfg->quadhd_io_num = -1;
-	mpu9250->buscfg->max_transfer_sz = 256;
+	mpu9250->buscfg.miso_io_num = PIN_NUM_MISO;
+	mpu9250->buscfg.mosi_io_num = PIN_NUM_MOSI;
+	mpu9250->buscfg.sclk_io_num = PIN_NUM_CLK;
+	mpu9250->buscfg.quadwp_io_num = -1;
+	mpu9250->buscfg.quadhd_io_num = -1;
+	mpu9250->buscfg.max_transfer_sz = 256;
 
-	mpu9250->devcfg->spics_io_num = PIN_NUM_CS;
-	mpu9250->devcfg->clock_speed_hz = SPI_MASTER_FREQ_20M; //Clock out at 20 MHz
-	mpu9250->devcfg->address_bits = 8;
-	mpu9250->devcfg->mode = 3; //SPI mode 3
-	mpu9250->devcfg->queue_size = 7;  //We want to be able to queue 7 transactions at a time
-	mpu9250->devcfg->flags = 0;
-	mpu9250->devcfg->cs_ena_pretrans = 0;
+	mpu9250->devcfg.spics_io_num = PIN_NUM_CS;
+	mpu9250->devcfg.clock_speed_hz = SPI_MASTER_FREQ_20M; //Clock out at 20 MHz
+	mpu9250->devcfg.address_bits = 8;
+	mpu9250->devcfg.mode = 3; //SPI mode 3
+	mpu9250->devcfg.queue_size = 7;  //We want to be able to queue 7 transactions at a time
 
 	mpu9250->int_pin=PIN_NUM_INT;
 
 	printf("SIZEOF MPU9250 [%d]\n", sizeof(*mpu9250));
-	printf("SIZEOF BUSCFG [%d]\n", sizeof(*(mpu9250->buscfg)));
-	printf("SIZEOF INTR FLAGS [%d]\n", mpu9250->buscfg->intr_flags);
-	printf("SIZEOF DEVCFG [%d]\n", sizeof(*(mpu9250->devcfg)));
-	printf("MISO: [%d]\n", mpu9250->buscfg->miso_io_num);
-	printf("MOSI: [%d]\n", mpu9250->buscfg->mosi_io_num);
-	printf("CS: [%d]\n", mpu9250->devcfg->spics_io_num);
-	printf("FREQ: [%d]\n", mpu9250->devcfg->clock_speed_hz);
-	printf("FLAGS: [%d]\n", mpu9250->devcfg->flags);
-	printf("PRETRANS: [%d]\n", mpu9250->devcfg->cs_ena_pretrans);
-	printf("POSTTRANS: [%d]\n", mpu9250->devcfg->cs_ena_posttrans);
+	printf("SIZEOF BUSCFG [%d]\n", sizeof(mpu9250->buscfg));
+	printf("SIZEOF INTR FLAGS [%d]\n", mpu9250->buscfg.intr_flags);
+	printf("SIZEOF DEVCFG [%d]\n", sizeof(mpu9250->devcfg));
+	printf("MISO: [%d]\n", mpu9250->buscfg.miso_io_num);
+	printf("MOSI: [%d]\n", mpu9250->buscfg.mosi_io_num);
+	printf("CS: [%d]\n", mpu9250->devcfg.spics_io_num);
+	printf("FREQ: [%d]\n", mpu9250->devcfg.clock_speed_hz);
+	printf("FLAGS: [%d]\n", mpu9250->devcfg.flags);
+	printf("PRETRANS: [%d]\n", mpu9250->devcfg.cs_ena_pretrans);
+	printf("POSTTRANS: [%d]\n", mpu9250->devcfg.cs_ena_posttrans);
 
 	//Initialize the SPI bus
-	ESP_ERROR_CHECK(spi_bus_initialize(MY_SPI_MPU9250_HOST, mpu9250->buscfg, 0));
+	ESP_ERROR_CHECK(spi_bus_initialize(MY_SPI_MPU9250_HOST, &mpu9250->buscfg, 0));
 	//Attach the MPU9250 to the SPI bus
 	printf("SIZEOF DEVCFG: [%d] addr: [%d]\n", sizeof(mpu9250->devcfg), (uint32_t)&(mpu9250->devcfg));
-	ESP_ERROR_CHECK(spi_bus_add_device(MY_SPI_MPU9250_HOST, mpu9250->devcfg, &(mpu9250->device_handle)));
+	ESP_ERROR_CHECK(spi_bus_add_device(MY_SPI_MPU9250_HOST, &mpu9250->devcfg, &(mpu9250->device_handle)));
 
 	printf("INIT MPU9250\n");
 	mpu9250_init(mpu9250);
@@ -79,15 +78,9 @@ void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
 }
 
 void my_mpu9250_task(void *arg) {
-	// spi configuration
-	spi_bus_config_t buscfg;
-	spi_device_interface_config_t devcfg;
-
 	// MPU9250 Handle
 	mpu9250_init_t mpu9250;
 	mpu9250_handle_t mpu9250_handle = &mpu9250;
-	mpu9250.buscfg = &buscfg;
-	mpu9250.devcfg = &devcfg;
 
 	// Init MPU9250
 	my_mpu9250_task_init(mpu9250_handle);
