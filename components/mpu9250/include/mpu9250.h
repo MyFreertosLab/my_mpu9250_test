@@ -282,7 +282,6 @@ enum clock_sel_e {
 ********** MPU9250 API ***********
 *********************************/
 typedef union {
-   int8_t all[26];
    struct {
      int16_t accel[3];
      int16_t temp;
@@ -302,6 +301,24 @@ typedef union {
 } mpu9250_raw_data_t;
 typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
 
+typedef union {
+   struct {
+     int16_t x;
+     int16_t y;
+     int16_t z;
+   } xyz;
+} mpu9250_acc_offset_t;
+typedef mpu9250_acc_offset_t* mpu9250_acc_offset_buff_t;
+
+typedef union {
+   struct {
+     int16_t x;
+     int16_t y;
+     int16_t z;
+   } xyz;
+} mpu9250_acc_bias_t;
+typedef mpu9250_acc_bias_t* mpu9250_acc_bias_buff_t;
+
 typedef uint8_t mpu9250_int_status_t;
 
 typedef struct mpu9250_init_s {
@@ -318,6 +335,9 @@ typedef struct mpu9250_init_s {
     uint8_t whoami;
 
     mpu9250_raw_data_t raw_data;
+    mpu9250_acc_offset_t acc_offset;
+    mpu9250_acc_bias_t acc_bias;
+
 
 //    // raw data
 //    mpu9250_raw_data_t mpu9250_raw_data_buff;
@@ -329,9 +349,12 @@ typedef mpu9250_init_t* mpu9250_handle_t;
 
 /* Set up APIs */
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_set_acc_8g(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_whoami(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_int_status(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_load_acc_offset(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_save_acc_offset(mpu9250_handle_t mpu9250_handle);
 
 #endif // _MPU9250_H_

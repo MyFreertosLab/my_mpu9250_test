@@ -87,14 +87,75 @@ void my_mpu9250_task(void *arg) {
 
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
+	// Original Acc offsets: [6684][-5436][9684]
+	mpu9250_handle->acc_offset.xyz.x = 6684;
+	mpu9250_handle->acc_offset.xyz.y = -5436;
+	mpu9250_handle->acc_offset.xyz.z = 9684;
+	ESP_ERROR_CHECK(mpu9250_save_acc_offset(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_load_acc_offset(mpu9250_handle));
+	printf("Acc offsets: [%d][%d][%d]\n", mpu9250_handle->acc_offset.xyz.x, mpu9250_handle->acc_offset.xyz.y,mpu9250_handle->acc_offset.xyz.z);
+
+	mpu9250_handle->acc_bias.xyz.x = 0;
+	mpu9250_handle->acc_bias.xyz.y = 0;
+	mpu9250_handle->acc_bias.xyz.z = 0;
 	uint32_t counter = 0;
+
+	// dicard 10000 samples
+	printf("Discarding 10000 Samples ... \n");
+	for(int i = 0; i < 10000; i++) {
+		ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
+	}
+
+	// Offset means
+	{
+		int32_t acc_sum[3] = {0,0,0};
+		printf("Calculating Acc Means ... \n");
+		for(int i = 0; i < 30000; i++) {
+			ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
+			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
+			acc_sum[0] += mpu9250_handle->raw_data.data_s_xyz.accel_data_x;
+			acc_sum[1] += mpu9250_handle->raw_data.data_s_xyz.accel_data_y;
+			acc_sum[2] += mpu9250_handle->raw_data.data_s_xyz.accel_data_z;
+		}
+
+		// offsets respect vertical attitude
+		mpu9250_handle->acc_offset.xyz.x += acc_sum[0]/30000;
+		mpu9250_handle->acc_offset.xyz.y += acc_sum[1]/30000;
+		mpu9250_handle->acc_offset.xyz.z += (acc_sum[2]/30000 - 2048);
+		printf("Acc offsets: [%d][%d][%d]\n", mpu9250_handle->acc_offset.xyz.x, mpu9250_handle->acc_offset.xyz.y,mpu9250_handle->acc_offset.xyz.z);
+		ESP_ERROR_CHECK(mpu9250_save_acc_offset(mpu9250_handle));
+	}
+
+	ESP_ERROR_CHECK(mpu9250_set_acc_8g(mpu9250_handle));
+
+	// Offset at 8g
+	{
+		int32_t acc_sum[3] = {0,0,0};
+		printf("Calculating Acc Means ... \n");
+		for(int i = 0; i < 30000; i++) {
+			ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
+			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
+			acc_sum[0] += mpu9250_handle->raw_data.data_s_xyz.accel_data_x;
+			acc_sum[1] += mpu9250_handle->raw_data.data_s_xyz.accel_data_y;
+			acc_sum[2] += mpu9250_handle->raw_data.data_s_xyz.accel_data_z;
+		}
+
+		// offsets respect vertical attitude
+		mpu9250_handle->acc_bias.xyz.x = acc_sum[0]/30000;
+		mpu9250_handle->acc_bias.xyz.y = acc_sum[1]/30000;
+		mpu9250_handle->acc_bias.xyz.z = (acc_sum[2]/30000 - 4096);
+		printf("Acc bias: [%d][%d][%d]\n", mpu9250_handle->acc_bias.xyz.x, mpu9250_handle->acc_bias.xyz.y,mpu9250_handle->acc_bias.xyz.z);
+	}
+
+	counter = 0;
 	while (true) {
 		counter++;
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
-			ESP_ERROR_CHECK(mpu9250_load_int_status(mpu9250_handle));
 			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 			if(counter%100 == 0) {
-				printf("Accel_X_H/L/V [%d][%d][%d]\n", mpu9250_handle->raw_data.all[0],mpu9250_handle->raw_data.all[1], mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
+				printf("Acc_X_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_x*100/4096, mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
+				printf("Acc_Y_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_y*100/4096, mpu9250_handle->raw_data.data_s_xyz.accel_data_y);
+				printf("Acc_Z_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_z*100/4096, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
 			}
 	    } else {
 	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
