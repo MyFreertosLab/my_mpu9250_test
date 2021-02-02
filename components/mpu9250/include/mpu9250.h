@@ -305,8 +305,8 @@ typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
 typedef uint8_t mpu9250_int_status_t;
 
 typedef struct mpu9250_init_s {
-	spi_bus_config_t buscfg;
-	spi_device_interface_config_t devcfg;
+	spi_bus_config_t* buscfg;
+	spi_device_interface_config_t* devcfg;
 	spi_device_handle_t device_handle;
 	TaskHandle_t data_ready_task_handle;
 
