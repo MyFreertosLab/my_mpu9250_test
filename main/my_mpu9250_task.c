@@ -49,10 +49,12 @@ void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
 
 	mpu9250->int_pin=PIN_NUM_INT;
 
+	printf("SIZEOF MPU9250 [%d]\n", sizeof(*mpu9250));
+
 	//Initialize the SPI bus
 	ESP_ERROR_CHECK(spi_bus_initialize(MY_SPI_MPU9250_HOST, &(mpu9250->buscfg), 0));
-
 	//Attach the MPU9250 to the SPI bus
+	printf("SIZEOF DEVCFG: [%d] addr: [%d]\n", sizeof(mpu9250->devcfg), (uint32_t)&(mpu9250->devcfg));
 	ESP_ERROR_CHECK(spi_bus_add_device(MY_SPI_MPU9250_HOST, &(mpu9250->devcfg), &(mpu9250->device_handle)));
 
 	printf("INIT MPU9250\n");
@@ -62,15 +64,27 @@ void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
 }
 
 void my_mpu9250_task(void *arg) {
+	// MPU9250 Handle
 	mpu9250_init_t mpu9250;
 	mpu9250_handle_t mpu9250_handle = &mpu9250;
 
+	// Init MPU9250
 	my_mpu9250_task_init(mpu9250_handle);
 
+	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 200 );
+
+	uint32_t counter = 0;
 	while (true) {
-	    if(xSemaphoreTake(((mpu9250_handle_t)mpu9250_handle)->spi_mutex, portMAX_DELAY) == pdTRUE) {
-			mpu9250_get_int_status(mpu9250_handle);
-			mpu9250_whoami(mpu9250_handle);
+		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
+			mpu9250_load_int_status(mpu9250_handle);
+			mpu9250_load_raw_data(mpu9250_handle);
+			counter++;
+			if(counter%100 == 0) {
+				printf("%d\n", counter);
+			}
+	    } else {
+	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
+	    	printf("SORRY!! Interrupt LOST!\n");
 	    }
 	}
 }

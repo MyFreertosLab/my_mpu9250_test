@@ -3,7 +3,9 @@
 
 #include <esp_err.h>
 #include <driver/spi_master.h>
-#include "freertos/semphr.h"
+#include "freertos/task.h"
+
+#define MPU9250_ID 0x70
 
 enum mpu9250_register {
 	MPU9250_SELF_TEST_X_GYRO =  0x00,
@@ -279,23 +281,6 @@ enum clock_sel_e {
 /*********************************
 ********** MPU9250 API ***********
 *********************************/
-typedef uint8_t mpu9250_int_status_t;
-typedef struct mpu9250_init_s {
-	// spi config and status
-	spi_bus_config_t buscfg;
-	spi_device_interface_config_t devcfg;
-	spi_device_handle_t device_handle;
-    SemaphoreHandle_t spi_mutex;
-
-	// int config and status
-	int int_pin;
-    uint16_t int_cb_flags;
-    void (*int_cb)(void* mpu9250_handle);
-    uint8_t int_status;
-
-} mpu9250_init_t;
-typedef mpu9250_init_t* mpu9250_handle_t;
-
 typedef union {
    uint8_t all[26];
    struct {
@@ -317,12 +302,37 @@ typedef union {
 } mpu9250_raw_data_t;
 typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
 
+typedef uint8_t mpu9250_int_status_t;
+
+typedef struct mpu9250_init_s {
+	spi_bus_config_t buscfg;
+	spi_device_interface_config_t devcfg;
+	spi_device_handle_t device_handle;
+	TaskHandle_t data_ready_task_handle;
+
+	// int config and status
+	int int_pin;
+    uint8_t int_status;
+
+    // MPU9250 id
+    uint8_t whoami;
+
+    // TODO: DA rivedere .. se aumento a 27 non funziona più SPI (fino a sizeof=112, poi passa a 116)??
+//    uint8_t raw_data[26];
+
+//    // raw data
+//    mpu9250_raw_data_t mpu9250_raw_data_buff;
+
+} mpu9250_init_t;
+typedef mpu9250_init_t* mpu9250_handle_t;
+
 #define MPU9250_READ_FLAG 0x80
 
 /* Set up APIs */
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle);
-esp_err_t mpu9250_get_int_status(mpu9250_handle_t mpu9250_handle);
-esp_err_t mpu9250_whoami(mpu9250_handle_t mpu9250_handle);
-esp_err_t mpu9250_get_data(mpu9250_handle_t mpu9250_handle, mpu9250_raw_data_buff_t mpu9250_raw_data_buff);
+esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_load_whoami(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_load_int_status(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle);
 
 #endif // _MPU9250_H_

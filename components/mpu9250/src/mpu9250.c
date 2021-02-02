@@ -25,30 +25,27 @@ static void IRAM_ATTR mpu9250_isr(void* mpu9250_handle)
 	static BaseType_t xHigherPriorityTaskWoken;
 	xHigherPriorityTaskWoken = pdFALSE;
 	counter++;
-
-	xSemaphoreGiveFromISR(((mpu9250_handle_t)mpu9250_handle)->spi_mutex, &xHigherPriorityTaskWoken);
+	vTaskNotifyGiveFromISR(((mpu9250_handle_t)mpu9250_handle)->data_ready_task_handle, &xHigherPriorityTaskWoken);
 	if( xHigherPriorityTaskWoken) {
-	        portYIELD_FROM_ISR(); // this wakes up sample_timer_task immediately
+		portYIELD_FROM_ISR(); // this wakes up sample_timer_task immediately
 	}
 }
 
-esp_err_t mpu9250_read8(mpu9250_handle_t mpu9250_handle, uint8_t reg, uint8_t* val) {
+static esp_err_t mpu9250_read8(mpu9250_handle_t mpu9250_handle, uint8_t reg, uint8_t* val) {
 	esp_err_t ret;
 	spi_transaction_t t;
 	memset(&t, 0, sizeof(t));       //Zero out the transaction
 	t.length = 8;                    //Transaction length is in bits.
 	t.addr = (MPU9250_READ_FLAG | reg);
-//	t.addr = (MPU9250_READ_FLAG | MPU9250_INT_STATUS);
 	t.flags = SPI_TRANS_USE_RXDATA;
 	ret = spi_device_polling_transmit(((mpu9250_handle_t)mpu9250_handle)->device_handle, &t);  //Transmit!
 	if (ret == ESP_OK) {
 	  	  *val=t.rx_data[0];
-//  	  ((mpu9250_handle_t)mpu9250_handle)->int_status=t.rx_data[0];
 	}
 	return ret;
 }
 
-esp_err_t mpu9250_write8(mpu9250_handle_t mpu9250_handle, uint8_t reg, uint8_t val) {
+static esp_err_t mpu9250_write8(mpu9250_handle_t mpu9250_handle, uint8_t reg, uint8_t val) {
 	esp_err_t ret;
 	spi_transaction_t t;
 	memset(&t, 0, sizeof(t));       //Zero out the transaction
@@ -62,21 +59,7 @@ esp_err_t mpu9250_write8(mpu9250_handle_t mpu9250_handle, uint8_t reg, uint8_t v
 
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	printf("PREPARE GPIO [%d]\n", mpu9250_handle->int_pin);
-	mpu9250_handle->spi_mutex=xSemaphoreCreateBinary();
-
-	// prepare GPIO
-    gpio_config_t io_conf={
-        .intr_type=GPIO_PIN_INTR_POSEDGE,
-        .mode=GPIO_MODE_INPUT,
-        .pull_down_en=1,
-        .pin_bit_mask=(1<<mpu9250_handle->int_pin)
-    };
-    gpio_config(&io_conf);
-
-	ESP_ERROR_CHECK(gpio_set_intr_type(mpu9250_handle->int_pin, GPIO_PIN_INTR_POSEDGE));
-	ESP_ERROR_CHECK(gpio_install_isr_service(0));
-	ESP_ERROR_CHECK(gpio_isr_handler_add(mpu9250_handle->int_pin, mpu9250_isr, (void*)mpu9250_handle));
-	xSemaphoreGive(((mpu9250_handle_t)mpu9250_handle)->spi_mutex);
+	mpu9250_handle->data_ready_task_handle=xTaskGetCurrentTaskHandle();
 
     // set Configuration Register
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_CONFIG, 0x01)); // gyro bandwidth 184Hz
@@ -102,31 +85,44 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
     // set Int Enable Register
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_ENABLE, 0x01)); // data ready int
 
+	// prepare GPIO Interrupt
+    gpio_config_t io_conf={
+        .intr_type=GPIO_PIN_INTR_POSEDGE,
+        .mode=GPIO_MODE_INPUT,
+        .pull_down_en=1,
+        .pin_bit_mask=(1<<mpu9250_handle->int_pin)
+    };
+    gpio_config(&io_conf);
+
+	ESP_ERROR_CHECK(gpio_set_intr_type(mpu9250_handle->int_pin, GPIO_PIN_INTR_POSEDGE));
+	ESP_ERROR_CHECK(gpio_install_isr_service(0));
+	ESP_ERROR_CHECK(gpio_isr_handler_add(mpu9250_handle->int_pin, mpu9250_isr, (void*)mpu9250_handle));
+
     return ESP_OK;
 }
-esp_err_t mpu9250_get_int_status(mpu9250_handle_t mpu9250_handle) {
+
+esp_err_t mpu9250_load_int_status(mpu9250_handle_t mpu9250_handle) {
 	return mpu9250_read8(mpu9250_handle, MPU9250_INT_STATUS, &((mpu9250_handle_t)mpu9250_handle)->int_status);
 }
-esp_err_t mpu9250_whoami(mpu9250_handle_t mpu9250_handle) {
-	if(counter%100 == 0) {
-		printf("COUNTER [%d]\n", counter);
-	}
-	esp_err_t ret = ESP_RST_EXT;
+
+esp_err_t mpu9250_load_whoami(mpu9250_handle_t mpu9250_handle) {
+	esp_err_t ret = ESP_FAIL;
 	spi_transaction_t t;
-//	printf("Keep Alive ...\n");
 	memset(&t, 0, sizeof(t));        //Zero out the transaction
 	t.length = 8;                    //Transaction length is in bits.
 	t.addr = (MPU9250_READ_FLAG | MPU9250_WHO_AM_I);
 	t.flags = SPI_TRANS_USE_RXDATA;
 	ret = spi_device_polling_transmit(mpu9250_handle->device_handle, &t);  //Transmit!
-	if (ret == ESP_OK) {
-//    		printf("MPU9250 ID: [%d][bits: %d]\n", (t.rx_data[0]), t.rxlength);
-	} else {
-		printf("ERROR: [%d]\n", ret);
-	}
-//    xSemaphoreGive(((mpu9250_handle_t)mpu9250_handle)->spi_mutex);
+	mpu9250_handle->whoami = (ret == ESP_OK ? t.rx_data[0] : 0);
 	return ret;
 }
-esp_err_t mpu9250_get_data(mpu9250_handle_t mpu9250_handle, mpu9250_raw_data_buff_t mpu9250_raw_data_buff) {
+
+esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle) {
+	mpu9250_load_whoami(mpu9250_handle);
+	return (mpu9250_handle->whoami == MPU9250_ID ? ESP_OK : ESP_FAIL);
+
+}
+
+esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
     return ESP_OK;
 }
