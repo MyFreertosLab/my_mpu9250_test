@@ -217,10 +217,10 @@ esp_err_t mpu9250_load_acc_offset(mpu9250_handle_t mpu9250_handle) {
 esp_err_t mpu9250_save_acc_offset(mpu9250_handle_t mpu9250_handle) {
 	uint8_t buff[8];
 	buff[0] = mpu9250_handle->acc_offset.xyz.x >> 8;
-	buff[1] = mpu9250_handle->acc_offset.xyz.x & 0x0F;
+	buff[1] = mpu9250_handle->acc_offset.xyz.x & 0x00FF;
 	buff[2] = 0;
 	buff[3] = mpu9250_handle->acc_offset.xyz.y >> 8;
-	buff[4] = mpu9250_handle->acc_offset.xyz.y & 0x0F;
+	buff[4] = mpu9250_handle->acc_offset.xyz.y & 0x00FF;
 	buff[5] = 0;
 	buff[6] = mpu9250_handle->acc_offset.xyz.z >> 8;
 	buff[7] = mpu9250_handle->acc_offset.xyz.z & 0x00FF;

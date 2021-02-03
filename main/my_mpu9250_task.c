@@ -99,9 +99,9 @@ void my_mpu9250_task(void *arg) {
 			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 			if(counter%100 == 0) {
 				// TODO: fare funzione conversione RAW -> G
-				printf("Acc_X_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_x*100/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
-				printf("Acc_Y_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_y*100/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_y);
-				printf("Acc_Z_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_z*100/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
+				printf("Acc_X_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_x*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
+				printf("Acc_Y_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_y*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_y);
+				printf("Acc_Z_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_z*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
 			}
 	    } else {
 	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
