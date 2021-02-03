@@ -353,7 +353,7 @@ typedef mpu9250_init_t* mpu9250_handle_t;
 /* Set up APIs */
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_acc_fsr(mpu9250_handle_t mpu9250_handle);
-esp_err_t mpu9250_save_acc_fsr(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_set_acc_fsr(mpu9250_handle_t mpu9250_handle, uint8_t fsr);
 esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_whoami(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_int_status(mpu9250_handle_t mpu9250_handle);
@@ -363,5 +363,6 @@ esp_err_t mpu9250_save_acc_offset(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_calc_acc_offset(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_calc_acc_biases(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_calc_acc_lsb(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs);
 
 #endif // _MPU9250_H_

@@ -15,66 +15,7 @@
 #include <my_mpu9250_task.h>
 #include <mpu9250.h>
 
-#ifdef CONFIG_IDF_TARGET_ESP32
-#define MY_SPI_MPU9250_HOST HSPI_HOST
-#define PIN_NUM_MISO GPIO_NUM_12
-#define PIN_NUM_MOSI GPIO_NUM_13
-#define PIN_NUM_CLK  GPIO_NUM_14
-#define PIN_NUM_CS   GPIO_NUM_15
-#define PIN_NUM_INT  GPIO_NUM_2
-
-#elif defined CONFIG_IDF_TARGET_ESP32S2
-#define MY_SPI_MPU9250_HOST SPI2_HOST
-#define PIN_NUM_MISO GPIO_NUM_37
-#define PIN_NUM_MOSI GPIO_NUM_35
-#define PIN_NUM_CLK  GPIO_NUM_36
-#define PIN_NUM_CS   GPIO_NUM_34
-#define PIN_NUM_INT  GPIO_NUM_2
-#endif
-
-
 void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
-    memset(mpu9250, 0, sizeof(mpu9250_init_t));
-    memset(&mpu9250->buscfg, 0, sizeof(spi_bus_config_t));
-    memset(&mpu9250->devcfg, 0, sizeof(spi_device_interface_config_t));
-
-	mpu9250->buscfg.miso_io_num = PIN_NUM_MISO;
-	mpu9250->buscfg.mosi_io_num = PIN_NUM_MOSI;
-	mpu9250->buscfg.sclk_io_num = PIN_NUM_CLK;
-	mpu9250->buscfg.quadwp_io_num = -1;
-	mpu9250->buscfg.quadhd_io_num = -1;
-	mpu9250->buscfg.max_transfer_sz = 256;
-
-	mpu9250->devcfg.spics_io_num = PIN_NUM_CS;
-	mpu9250->devcfg.clock_speed_hz = SPI_MASTER_FREQ_20M; //Clock out at 20 MHz
-	mpu9250->devcfg.address_bits = 8;
-	mpu9250->devcfg.mode = 3; //SPI mode 3
-	mpu9250->devcfg.queue_size = 7;  //We want to be able to queue 7 transactions at a time
-
-	mpu9250->int_pin=PIN_NUM_INT;
-
-	printf("SIZEOF MPU9250 [%d]\n", sizeof(*mpu9250));
-	printf("SIZEOF BUSCFG [%d]\n", sizeof(mpu9250->buscfg));
-	printf("SIZEOF INTR FLAGS [%d]\n", mpu9250->buscfg.intr_flags);
-	printf("SIZEOF DEVCFG [%d]\n", sizeof(mpu9250->devcfg));
-	printf("MISO: [%d]\n", mpu9250->buscfg.miso_io_num);
-	printf("MOSI: [%d]\n", mpu9250->buscfg.mosi_io_num);
-	printf("CS: [%d]\n", mpu9250->devcfg.spics_io_num);
-	printf("FREQ: [%d]\n", mpu9250->devcfg.clock_speed_hz);
-	printf("FLAGS: [%d]\n", mpu9250->devcfg.flags);
-	printf("PRETRANS: [%d]\n", mpu9250->devcfg.cs_ena_pretrans);
-	printf("POSTTRANS: [%d]\n", mpu9250->devcfg.cs_ena_posttrans);
-
-	//Initialize the SPI bus
-	ESP_ERROR_CHECK(spi_bus_initialize(MY_SPI_MPU9250_HOST, &mpu9250->buscfg, 0));
-	//Attach the MPU9250 to the SPI bus
-	printf("SIZEOF DEVCFG: [%d] addr: [%d]\n", sizeof(mpu9250->devcfg), (uint32_t)&(mpu9250->devcfg));
-	ESP_ERROR_CHECK(spi_bus_add_device(MY_SPI_MPU9250_HOST, &mpu9250->devcfg, &(mpu9250->device_handle)));
-
-	printf("INIT MPU9250\n");
-	mpu9250_init(mpu9250);
-	printf("INITIALIZED MPU9250\n");
-
 }
 
 void my_mpu9250_task(void *arg) {
@@ -83,14 +24,16 @@ void my_mpu9250_task(void *arg) {
 	mpu9250_handle_t mpu9250_handle = &mpu9250;
 
 	// Init MPU9250
-	my_mpu9250_task_init(mpu9250_handle);
+	ESP_ERROR_CHECK(mpu9250_init(mpu9250_handle));
+
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
+	// calibration offset and biases
 	ESP_ERROR_CHECK(mpu9250_calc_acc_offset(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_calc_acc_biases(mpu9250_handle));
 
-	mpu9250_handle->acc_fsr=INV_FSR_4G;
-	ESP_ERROR_CHECK(mpu9250_save_acc_fsr(mpu9250_handle));
+	// set accel full scale range = 4G
+	ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_4G));
 
 	uint32_t counter = 0;
 	while (true) {
@@ -102,6 +45,26 @@ void my_mpu9250_task(void *arg) {
 				printf("Acc_X_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_x*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
 				printf("Acc_Y_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_y*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_y);
 				printf("Acc_Z_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_z*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
+			}
+
+			if(counter <= 20000) {
+				if(mpu9250_handle->acc_fsr != INV_FSR_4G) {
+					ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_4G));
+				}
+			} else if(counter > 20000 && counter <= 40000) {
+				if(mpu9250_handle->acc_fsr != INV_FSR_8G) {
+					ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_8G));
+				}
+			} else if(counter > 40000 && counter <= 60000) {
+				if(mpu9250_handle->acc_fsr != INV_FSR_2G) {
+					ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_2G));
+				}
+			} else if(counter > 60000 && counter <= 80000) {
+				if(mpu9250_handle->acc_fsr != INV_FSR_16G) {
+					ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_16G));
+				}
+			} else if(counter > 80000) {
+			    counter = 0;
 			}
 	    } else {
 	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));

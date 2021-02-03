@@ -17,6 +17,25 @@
 #include <mpu9250.h>
 #include <driver/gpio.h>
 
+// TODO: definire in Kdconfig
+#ifdef CONFIG_IDF_TARGET_ESP32
+#define MY_SPI_MPU9250_HOST HSPI_HOST
+#define PIN_NUM_MISO GPIO_NUM_12
+#define PIN_NUM_MOSI GPIO_NUM_13
+#define PIN_NUM_CLK  GPIO_NUM_14
+#define PIN_NUM_CS   GPIO_NUM_15
+#define PIN_NUM_INT  GPIO_NUM_2
+
+#elif defined CONFIG_IDF_TARGET_ESP32S2
+#define MY_SPI_MPU9250_HOST SPI2_HOST
+#define PIN_NUM_MISO GPIO_NUM_37
+#define PIN_NUM_MOSI GPIO_NUM_35
+#define PIN_NUM_CLK  GPIO_NUM_36
+#define PIN_NUM_CS   GPIO_NUM_34
+#define PIN_NUM_INT  GPIO_NUM_2
+#endif
+
+
 
 /************************************************************************
  ************** P R I V A T E  I M P L E M E N T A T I O N **************
@@ -81,11 +100,77 @@ static esp_err_t mpu9250_write_buff(mpu9250_handle_t mpu9250_handle, uint8_t reg
 	return ret;
 }
 
+static esp_err_t mpu9250_spi_init(mpu9250_handle_t mpu9250_handle) {
+	printf("MPU9250: Initializing SPI ... \n");
+    memset(mpu9250_handle, 0, sizeof(mpu9250_init_t));
+
+    mpu9250_handle->buscfg.miso_io_num = PIN_NUM_MISO;
+    mpu9250_handle->buscfg.mosi_io_num = PIN_NUM_MOSI;
+    mpu9250_handle->buscfg.sclk_io_num = PIN_NUM_CLK;
+    mpu9250_handle->buscfg.quadwp_io_num = -1;
+    mpu9250_handle->buscfg.quadhd_io_num = -1;
+    mpu9250_handle->buscfg.max_transfer_sz = 256;
+
+    mpu9250_handle->devcfg.spics_io_num = PIN_NUM_CS;
+    mpu9250_handle->devcfg.clock_speed_hz = SPI_MASTER_FREQ_20M; //Clock out at 20 MHz
+    mpu9250_handle->devcfg.address_bits = 8;
+    mpu9250_handle->devcfg.mode = 3; //SPI mode 3
+    mpu9250_handle->devcfg.queue_size = 7;  //We want to be able to queue 7 transactions at a time
+
+    mpu9250_handle->int_pin=PIN_NUM_INT;
+
+	printf("MPU9250: miso [%d]\n", mpu9250_handle->buscfg.miso_io_num);
+	printf("MPU9250: mosi [%d]\n", mpu9250_handle->buscfg.mosi_io_num);
+	printf("MPU9250: cs [%d]\n", mpu9250_handle->devcfg.spics_io_num);
+	printf("MPU9250: freq [%d]\n", mpu9250_handle->devcfg.clock_speed_hz);
+	printf("MPU9250: flags [%d]\n", mpu9250_handle->devcfg.flags);
+
+	//Initialize the SPI bus
+	ESP_ERROR_CHECK(spi_bus_initialize(MY_SPI_MPU9250_HOST, &mpu9250_handle->buscfg, 0));
+	//Attach the MPU9250 to the SPI bus
+	ESP_ERROR_CHECK(spi_bus_add_device(MY_SPI_MPU9250_HOST, &mpu9250_handle->devcfg, &(mpu9250_handle->device_handle)));
+	printf("MPU9250: SPI initialized\n");
+	return ESP_OK;
+}
+static esp_err_t mpu9250_save_acc_fsr(mpu9250_handle_t mpu9250_handle) {
+	uint8_t acc_conf = 0;
+	uint8_t acc_conf_req = mpu9250_handle->acc_fsr;
+    ESP_ERROR_CHECK(mpu9250_read8(mpu9250_handle, MPU9250_ACCEL_CONFIG, &acc_conf));
+    uint8_t toWrite = (acc_conf & MPU9250_ACC_FSR_MASK) | ((mpu9250_handle->acc_fsr << MPU9250_ACC_FSR_LBIT)& (~MPU9250_ACC_FSR_MASK));
+    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_ACCEL_CONFIG, toWrite));
+    ESP_ERROR_CHECK(mpu9250_load_acc_fsr(mpu9250_handle));
+
+	switch(mpu9250_handle->acc_fsr) {
+	case INV_FSR_2G: {
+		printf("MPU9250: AccFSR 2g\n");
+		break;
+	}
+	case INV_FSR_4G: {
+		printf("MPU9250: AccFSR 4g\n");
+		break;
+	}
+	case INV_FSR_8G: {
+		printf("MPU9250: AccFSR 8g\n");
+		break;
+	}
+	case INV_FSR_16G: {
+		printf("MPU9250: AccFSR 16g\n");
+		break;
+	}
+	default: {
+		printf("MPU9250: AccFSR UNKNOWN [%d]\n", mpu9250_handle->acc_fsr);
+		break;
+	}
+	}
+    return (mpu9250_handle->acc_fsr == acc_conf_req ? ESP_OK : ESP_FAIL);
+}
+
 /************************************************************************
  ****************** A P I  I M P L E M E N T A T I O N ******************
  ************************************************************************/
 
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
+	ESP_ERROR_CHECK(mpu9250_spi_init(mpu9250_handle));
 	mpu9250_handle->data_ready_task_handle=xTaskGetCurrentTaskHandle();
 
     // set Configuration Register
@@ -130,7 +215,7 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 
 	printf("MPU9250: Configuring gpio interrupts ....\n");
 	ESP_ERROR_CHECK(gpio_set_intr_type(mpu9250_handle->int_pin, GPIO_PIN_INTR_POSEDGE));
-	ESP_ERROR_CHECK(gpio_install_isr_service(0));
+	ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_IRAM));
 	ESP_ERROR_CHECK(gpio_isr_handler_add(mpu9250_handle->int_pin, mpu9250_isr, (void*)mpu9250_handle));
 	printf("MPU9250: Gpio interrupts configured ..\n");
 
@@ -159,37 +244,11 @@ esp_err_t mpu9250_load_acc_fsr(mpu9250_handle_t mpu9250_handle) {
     ESP_ERROR_CHECK(mpu9250_calc_acc_lsb(mpu9250_handle));
 	return ESP_OK;
 }
-esp_err_t mpu9250_save_acc_fsr(mpu9250_handle_t mpu9250_handle) {
-	uint8_t acc_conf = 0;
-	uint8_t acc_conf_req = mpu9250_handle->acc_fsr;
-    ESP_ERROR_CHECK(mpu9250_read8(mpu9250_handle, MPU9250_ACCEL_CONFIG, &acc_conf));
-    uint8_t toWrite = (acc_conf & MPU9250_ACC_FSR_MASK) | ((mpu9250_handle->acc_fsr << MPU9250_ACC_FSR_LBIT)& (~MPU9250_ACC_FSR_MASK));
-    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_ACCEL_CONFIG, toWrite));
-    ESP_ERROR_CHECK(mpu9250_load_acc_fsr(mpu9250_handle));
 
-	switch(mpu9250_handle->acc_fsr) {
-	case INV_FSR_2G: {
-		printf("MPU9250: AccFSR 2g\n");
-		break;
-	}
-	case INV_FSR_4G: {
-		printf("MPU9250: AccFSR 4g\n");
-		break;
-	}
-	case INV_FSR_8G: {
-		printf("MPU9250: AccFSR 8g\n");
-		break;
-	}
-	case INV_FSR_16G: {
-		printf("MPU9250: AccFSR 16g\n");
-		break;
-	}
-	default: {
-		printf("MPU9250: AccFSR UNKNOWN [%d]\n", mpu9250_handle->acc_fsr);
-		break;
-	}
-	}
-    return (mpu9250_handle->acc_fsr == acc_conf_req ? ESP_OK : ESP_FAIL);
+esp_err_t mpu9250_set_acc_fsr(mpu9250_handle_t mpu9250_handle, uint8_t fsr) {
+	mpu9250_handle->acc_fsr=fsr;
+	ESP_ERROR_CHECK(mpu9250_save_acc_fsr(mpu9250_handle));
+	return ESP_OK;
 }
 
 esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle) {
@@ -258,16 +317,20 @@ esp_err_t mpu9250_calc_acc_bias(mpu9250_handle_t mpu9250_handle) {
 }
 
 esp_err_t mpu9250_calc_acc_biases(mpu9250_handle_t mpu9250_handle) {
-	mpu9250_handle->acc_fsr=INV_FSR_8G;
-	ESP_ERROR_CHECK(mpu9250_save_acc_fsr(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_16G));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10));
 	ESP_ERROR_CHECK(mpu9250_calc_acc_bias(mpu9250_handle));
 
-	mpu9250_handle->acc_fsr=INV_FSR_4G;
-	ESP_ERROR_CHECK(mpu9250_save_acc_fsr(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_8G));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10));
 	ESP_ERROR_CHECK(mpu9250_calc_acc_bias(mpu9250_handle));
 
-	mpu9250_handle->acc_fsr=INV_FSR_2G;
-	ESP_ERROR_CHECK(mpu9250_save_acc_fsr(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_4G));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10));
+	ESP_ERROR_CHECK(mpu9250_calc_acc_bias(mpu9250_handle));
+
+	ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_2G));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10));
 	ESP_ERROR_CHECK(mpu9250_calc_acc_bias(mpu9250_handle));
 
 	return ESP_OK;
@@ -300,16 +363,15 @@ esp_err_t mpu9250_calc_acc_offset(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->acc_bias[mpu9250_handle->acc_fsr].xyz.z = 0;
 
 	// dicard 10000 samples
-	printf("Discarding 10000 Samples ... \n");
-	for(int i = 0; i < 10000; i++) {
-		ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
-	}
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
 
-	// Offset means
-	{
+	printf("Calculating Acc Offset with 60000 samples (wait for one minute)... \n");
+	uint16_t max_means = 60;
+	int32_t acc_means[3] = {0,0,0};
+	for(int j = 0; j < max_means; j++) {
+		uint16_t max_samples = 1000;
 		int32_t acc_sum[3] = {0,0,0};
-		printf("Calculating Acc Means ... \n");
-		for(int i = 0; i < 30000; i++) {
+		for(int i = 0; i < max_samples; i++) {
 			ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
 			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 			acc_sum[0] += mpu9250_handle->raw_data.data_s_xyz.accel_data_x;
@@ -318,12 +380,29 @@ esp_err_t mpu9250_calc_acc_offset(mpu9250_handle_t mpu9250_handle) {
 		}
 
 		// offsets respect vertical attitude
-		mpu9250_handle->acc_offset.xyz.x += acc_sum[0]/30000;
-		mpu9250_handle->acc_offset.xyz.y += acc_sum[1]/30000;
-		mpu9250_handle->acc_offset.xyz.z += (acc_sum[2]/30000 - mpu9250_handle->acc_lsb);
-		printf("Acc offsets: [%d][%d][%d]\n", mpu9250_handle->acc_offset.xyz.x, mpu9250_handle->acc_offset.xyz.y,mpu9250_handle->acc_offset.xyz.z);
-		ESP_ERROR_CHECK(mpu9250_save_acc_offset(mpu9250_handle));
+		acc_means[0] += acc_sum[0]/max_samples;
+		acc_means[1] += acc_sum[1]/max_samples;
+		acc_means[2] += acc_sum[2]/max_samples;
 	}
+	acc_means[0] = acc_means[0]/max_means;
+	acc_means[1] = acc_means[1]/max_means;
+	acc_means[2] = acc_means[2]/max_means;
 
+	mpu9250_handle->acc_offset.xyz.x -= acc_means[0];
+	mpu9250_handle->acc_offset.xyz.y -= acc_means[1];
+	mpu9250_handle->acc_offset.xyz.z -= (acc_means[2] - mpu9250_handle->acc_lsb);
+	printf("Acc offsets: [%d][%d][%d]\n", mpu9250_handle->acc_offset.xyz.x, mpu9250_handle->acc_offset.xyz.y,mpu9250_handle->acc_offset.xyz.z);
+	printf("Acc means: [%d][%d][%d]\n", acc_means[0], acc_means[1],acc_means[2]);
+
+	ESP_ERROR_CHECK(mpu9250_save_acc_offset(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10));
+	return ESP_OK;
+}
+esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs) {
+	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
+	printf("Discarding %d Samples ... \n", num_msgs);
+	for(uint16_t i = 0; i < num_msgs; i++) {
+		ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
+	}
 	return ESP_OK;
 }
