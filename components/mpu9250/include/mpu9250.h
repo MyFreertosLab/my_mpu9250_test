@@ -110,6 +110,8 @@ enum mpu9250_register {
 	MPU9250_ZA_OFFSET_L =       0x7E
 };
 #define MPU9250_WHO_AM_I_RESULT 0x70
+#define MPU9250_ACC_FSR_MASK    0xE7
+#define MPU9250_ACC_FSR_LBIT    3
 
 /*********************************
 *********** Gyroscope ************
@@ -336,8 +338,9 @@ typedef struct mpu9250_init_s {
 
     mpu9250_raw_data_t raw_data;
     mpu9250_acc_offset_t acc_offset;
-    mpu9250_acc_bias_t acc_bias;
-
+    mpu9250_acc_bias_t acc_bias[4];
+    uint8_t acc_fsr;
+    uint16_t acc_lsb;
 
 //    // raw data
 //    mpu9250_raw_data_t mpu9250_raw_data_buff;
@@ -349,12 +352,16 @@ typedef mpu9250_init_t* mpu9250_handle_t;
 
 /* Set up APIs */
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle);
-esp_err_t mpu9250_set_acc_8g(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_load_acc_fsr(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_save_acc_fsr(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_whoami(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_int_status(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_acc_offset(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_save_acc_offset(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_calc_acc_offset(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_calc_acc_biases(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_calc_acc_lsb(mpu9250_handle_t mpu9250_handle);
 
 #endif // _MPU9250_H_
