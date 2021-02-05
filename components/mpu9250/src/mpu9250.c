@@ -194,7 +194,7 @@ static esp_err_t mpu9250_calc_acc_means(mpu9250_handle_t mpu9250_handle, int32_t
 	return ESP_OK;
 }
 
-static esp_err_t mpu9250_calc_acc_sqm(mpu9250_handle_t mpu9250_handle, int32_t acc_means, float* acc_sqm, uint8_t cycles) {
+static esp_err_t mpu9250_calc_acc_sqm(mpu9250_handle_t mpu9250_handle, int32_t* acc_means, float* acc_sqm, uint8_t cycles) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
 	printf("Calculating Acc sqm with %d000 samples (wait for %d seconds)... \n", cycles, cycles);
@@ -217,7 +217,7 @@ static esp_err_t mpu9250_calc_acc_sqm(mpu9250_handle_t mpu9250_handle, int32_t a
 	return ESP_OK;
 }
 
-static esp_err_t mpu9250_calc_acc_cdv(mpu9250_handle_t mpu9250_handle, int32_t acc_means, float* acc_sqm, float* acc_cdv, uint8_t cycles) {
+static esp_err_t mpu9250_calc_acc_cdv(mpu9250_handle_t mpu9250_handle, int32_t* acc_means, float* acc_sqm, float* acc_cdv, uint8_t cycles) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
 	printf("Calculating Acc cdv with %d000 samples (wait for %d seconds)... \n", cycles, cycles);
