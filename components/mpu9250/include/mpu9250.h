@@ -304,22 +304,19 @@ typedef union {
 typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
 
 typedef union {
+   int16_t array[3];
    struct {
      int16_t x;
      int16_t y;
      int16_t z;
    } xyz;
-} mpu9250_acc_offset_t;
+} mpu9250_int_3d_t;
+typedef mpu9250_int_3d_t mpu9250_acc_offset_t;
 typedef mpu9250_acc_offset_t* mpu9250_acc_offset_buff_t;
 
-typedef union {
-   struct {
-     int16_t x;
-     int16_t y;
-     int16_t z;
-   } xyz;
-} mpu9250_acc_bias_t;
-typedef mpu9250_acc_bias_t* mpu9250_acc_bias_buff_t;
+/* Fattore scarto quadratico medio */
+typedef mpu9250_int_3d_t mpu9250_acc_sqm_t;
+typedef mpu9250_acc_sqm_t* mpu9250_acc_sqm_buff_t;
 
 typedef uint8_t mpu9250_int_status_t;
 
@@ -338,8 +335,8 @@ typedef struct mpu9250_init_s {
 
     mpu9250_raw_data_t raw_data;
     mpu9250_acc_offset_t acc_offset;
-    mpu9250_acc_bias_t acc_bias[4];
-    uint8_t acc_fsr;
+    mpu9250_acc_sqm_t acc_sqm[4];
+	uint8_t acc_fsr;
     uint16_t acc_lsb;
 
 //    // raw data
@@ -361,8 +358,6 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_acc_offset(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_save_acc_offset(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_calc_acc_offset(mpu9250_handle_t mpu9250_handle);
-esp_err_t mpu9250_calc_acc_biases(mpu9250_handle_t mpu9250_handle);
-esp_err_t mpu9250_calc_acc_lsb(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs);
 
 #endif // _MPU9250_H_

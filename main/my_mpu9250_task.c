@@ -34,8 +34,7 @@ void my_mpu9250_task(void *arg) {
 
 	// set accel full scale range = 4G
 	ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_4G));
-	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10));
-	ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 1000));
 
 	uint32_t counter = 0;
 	while (true) {
@@ -44,14 +43,27 @@ void my_mpu9250_task(void *arg) {
 			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 
 			// TODO: Definire struttura dati stimati in mu9250.h
-			// TODO: Correggere i dati raw con il fattore K=(1-cdv)
 			// TODO: Assegnare i dati stimati alla struttura dati
 
 			if(counter%100 == 0) {
 				// TODO: fare funzione conversione RAW -> G
-				printf("Acc_X_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_x*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
-				printf("Acc_Y_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_y*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_y);
-				printf("Acc_Z_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_z*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
+				int8_t sx = (mpu9250_handle->raw_data.data_s_xyz.accel_data_x < 0 ? -1 : 1);
+				int8_t sy = (mpu9250_handle->raw_data.data_s_xyz.accel_data_y < 0 ? -1 : 1);
+				int8_t sz = (mpu9250_handle->raw_data.data_s_xyz.accel_data_z < 0 ? -1 : 1);
+
+				// correggo con lo scarto quadratico medio
+				mpu9250_handle->raw_data.data_s_xyz.accel_data_x -= sx*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.x);
+				mpu9250_handle->raw_data.data_s_xyz.accel_data_y -= sy*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.y);
+				mpu9250_handle->raw_data.data_s_xyz.accel_data_z -= sz*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.z);
+
+				// esprimo in g
+				int16_t xg = (mpu9250_handle->raw_data.data_s_xyz.accel_data_x*1000/mpu9250_handle->acc_lsb);
+				int16_t yg = (mpu9250_handle->raw_data.data_s_xyz.accel_data_y*1000/mpu9250_handle->acc_lsb);
+				int16_t zg = (mpu9250_handle->raw_data.data_s_xyz.accel_data_z*1000/mpu9250_handle->acc_lsb);
+
+				printf("Acc_X_H/L/V [%d][%d]\n", xg, mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
+				printf("Acc_Y_H/L/V [%d][%d]\n", yg, mpu9250_handle->raw_data.data_s_xyz.accel_data_y);
+				printf("Acc_Z_H/L/V [%d][%d]\n", zg, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
 			}
 
 			if(counter <= 20000) {
