@@ -30,16 +30,23 @@ void my_mpu9250_task(void *arg) {
 
 	// calibration offset and biases
 	ESP_ERROR_CHECK(mpu9250_calc_acc_offset(mpu9250_handle));
-	ESP_ERROR_CHECK(mpu9250_calc_acc_biases(mpu9250_handle));
+
 
 	// set accel full scale range = 4G
 	ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_4G));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10));
+	ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 
 	uint32_t counter = 0;
 	while (true) {
 		counter++;
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
 			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
+
+			// TODO: Definire struttura dati stimati in mu9250.h
+			// TODO: Correggere i dati raw con il fattore K=(1-cdv)
+			// TODO: Assegnare i dati stimati alla struttura dati
+
 			if(counter%100 == 0) {
 				// TODO: fare funzione conversione RAW -> G
 				printf("Acc_X_H/L/V [%d][%d]\n", mpu9250_handle->raw_data.data_s_xyz.accel_data_x*1000/mpu9250_handle->acc_lsb, mpu9250_handle->raw_data.data_s_xyz.accel_data_x);
