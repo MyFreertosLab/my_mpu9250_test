@@ -211,9 +211,9 @@ static esp_err_t mpu9250_calc_acc_sqm(mpu9250_handle_t mpu9250_handle, int32_t a
 		acc_sum[1] += (mpu9250_handle->raw_data.data_s_xyz.accel_data_y - acc_means[1])*(mpu9250_handle->raw_data.data_s_xyz.accel_data_y - acc_means[1]);
 		acc_sum[2] += (mpu9250_handle->raw_data.data_s_xyz.accel_data_z - acc_means[2])*(mpu9250_handle->raw_data.data_s_xyz.accel_data_z - acc_means[2]);
 	}
-	acc_sqm[0] = acc_means[0]/(max_cycles);
-	acc_sqm[1] = acc_means[1]/(max_cycles);
-	acc_sqm[2] = acc_means[2]/(max_cycles);
+	acc_sqm[0] = sqrt(acc_means[0]/(max_cycles));
+	acc_sqm[1] = sqrt(acc_means[1]/(max_cycles));
+	acc_sqm[2] = sqrt(acc_means[2]/(max_cycles));
 	return ESP_OK;
 }
 
