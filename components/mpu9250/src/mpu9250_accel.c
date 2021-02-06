@@ -78,13 +78,13 @@ static esp_err_t mpu9250_acc_calc_means(mpu9250_handle_t mpu9250_handle, int32_t
 	return ESP_OK;
 }
 
-static esp_err_t mpu9250_acc_calc_sqm(mpu9250_handle_t mpu9250_handle, int32_t* acc_means, int16_t* acc_sqm, uint8_t cycles) {
+static esp_err_t mpu9250_acc_calc_var(mpu9250_handle_t mpu9250_handle, int32_t* acc_means, int16_t* acc_var, uint8_t cycles) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
 	printf("Calculating Acc sqm with %d000 samples (wait for %d seconds)... \n", cycles, cycles);
-	acc_sqm[0] = 0.0f;
-	acc_sqm[1] = 0.0f;
-	acc_sqm[2] = 0.0f;
+	acc_var[0] = 0.0f;
+	acc_var[1] = 0.0f;
+	acc_var[2] = 0.0f;
 
 	for(int j = 0; j < cycles; j++) {
 		uint16_t max_samples = 1000;
@@ -96,30 +96,27 @@ static esp_err_t mpu9250_acc_calc_sqm(mpu9250_handle_t mpu9250_handle, int32_t* 
 			acc_sum[0] += (mpu9250_handle->raw_data.data_s_xyz.accel_data_x - acc_means[0])*(mpu9250_handle->raw_data.data_s_xyz.accel_data_x - acc_means[0]);
 			acc_sum[1] += (mpu9250_handle->raw_data.data_s_xyz.accel_data_y - acc_means[1])*(mpu9250_handle->raw_data.data_s_xyz.accel_data_y - acc_means[1]);
 			acc_sum[2] += (mpu9250_handle->raw_data.data_s_xyz.accel_data_z - acc_means[2])*(mpu9250_handle->raw_data.data_s_xyz.accel_data_z - acc_means[2]);
-//			if(i%100 == 0) {
-//				printf("SQM: X(R[%d] M[%d] D[%d]) Y(R[%d] M[%d] D[%d]) Z(R[%d] M[%d] D[%d])\n",
-//						mpu9250_handle->raw_data.data_s_xyz.accel_data_x,
-//						acc_means[0],
-//						(mpu9250_handle->raw_data.data_s_xyz.accel_data_x - acc_means[0]),
-//						mpu9250_handle->raw_data.data_s_xyz.accel_data_y,
-//						acc_means[1],
-//						(mpu9250_handle->raw_data.data_s_xyz.accel_data_y - acc_means[1]),
-//						mpu9250_handle->raw_data.data_s_xyz.accel_data_z,
-//						acc_means[2],
-//						(mpu9250_handle->raw_data.data_s_xyz.accel_data_z - acc_means[2])
-//					  );
-//			}
 		}
 
 		// offsets respect vertical attitude
-		acc_sqm[0] += acc_sum[0]/max_samples;
-		acc_sqm[1] += acc_sum[1]/max_samples;
-		acc_sqm[2] += acc_sum[2]/max_samples;
+		acc_var[0] += acc_sum[0]/max_samples;
+		acc_var[1] += acc_sum[1]/max_samples;
+		acc_var[2] += acc_sum[2]/max_samples;
 	}
 
-	acc_sqm[0] = sqrt(acc_sqm[0]/(cycles));
-	acc_sqm[1] = sqrt(acc_sqm[1]/(cycles));
-	acc_sqm[2] = sqrt(acc_sqm[2]/(cycles));
+	acc_var[0] = acc_var[0]/(cycles);
+	acc_var[1] = acc_var[1]/(cycles);
+	acc_var[2] = acc_var[2]/(cycles);
+	printf("Acc_var: [%d][%d][%d]\n", acc_var[0], acc_var[1],acc_var[2]);
+
+	return ESP_OK;
+}
+static esp_err_t mpu9250_acc_calc_sqm(mpu9250_handle_t mpu9250_handle, int32_t* acc_means, int16_t* acc_sqm, uint8_t cycles) {
+	ESP_ERROR_CHECK(mpu9250_acc_calc_var(mpu9250_handle, acc_means, mpu9250_handle->acc_var[mpu9250_handle->acc_fsr].array, 60));
+	acc_sqm[0] = sqrt(mpu9250_handle->acc_var[mpu9250_handle->acc_fsr].xyz.x);
+	acc_sqm[1] = sqrt(mpu9250_handle->acc_var[mpu9250_handle->acc_fsr].xyz.y);
+	acc_sqm[2] = sqrt(mpu9250_handle->acc_var[mpu9250_handle->acc_fsr].xyz.z);
+
 	printf("Acc_sqm: [%d][%d][%d]\n", acc_sqm[0], acc_sqm[1],acc_sqm[2]);
 
 	return ESP_OK;
