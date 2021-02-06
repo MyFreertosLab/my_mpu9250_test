@@ -13,7 +13,7 @@
 #include <driver/spi_master.h>
 #include <driver/gpio.h>
 #include <my_mpu9250_task.h>
-#include <mpu9250.h>
+#include <mpu9250_accel.h>
 
 void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
 }
@@ -29,11 +29,11 @@ void my_mpu9250_task(void *arg) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
 	// calibration offset and biases
-	ESP_ERROR_CHECK(mpu9250_calc_acc_offset(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_acc_calibrate(mpu9250_handle));
 
 
 	// set accel full scale range = 4G
-	ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_4G));
+	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_4G));
 	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 1000));
 
 	uint32_t counter = 0;
@@ -68,19 +68,19 @@ void my_mpu9250_task(void *arg) {
 
 			if(counter <= 20000) {
 				if(mpu9250_handle->acc_fsr != INV_FSR_4G) {
-					ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_4G));
+					ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_4G));
 				}
 			} else if(counter > 20000 && counter <= 40000) {
 				if(mpu9250_handle->acc_fsr != INV_FSR_8G) {
-					ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_8G));
+					ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_8G));
 				}
 			} else if(counter > 40000 && counter <= 60000) {
 				if(mpu9250_handle->acc_fsr != INV_FSR_2G) {
-					ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_2G));
+					ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_2G));
 				}
 			} else if(counter > 60000 && counter <= 80000) {
 				if(mpu9250_handle->acc_fsr != INV_FSR_16G) {
-					ESP_ERROR_CHECK(mpu9250_set_acc_fsr(mpu9250_handle, INV_FSR_16G));
+					ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_16G));
 				}
 			} else if(counter > 80000) {
 			    counter = 0;
