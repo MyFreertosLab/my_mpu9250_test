@@ -34,7 +34,7 @@ void my_mpu9250_task(void *arg) {
 
 	// set accel full scale range = 4G
 	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_4G));
-	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 1000));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
 
 	uint32_t counter = 0;
 	while (true) {
@@ -51,10 +51,10 @@ void my_mpu9250_task(void *arg) {
 				int8_t sy = (mpu9250_handle->raw_data.data_s_xyz.accel_data_y < 0 ? -1 : 1);
 				int8_t sz = (mpu9250_handle->raw_data.data_s_xyz.accel_data_z < 0 ? -1 : 1);
 
-				// correggo con lo scarto quadratico medio
-				mpu9250_handle->raw_data.data_s_xyz.accel_data_x -= sx*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.x);
-				mpu9250_handle->raw_data.data_s_xyz.accel_data_y -= sy*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.y);
-				mpu9250_handle->raw_data.data_s_xyz.accel_data_z -= sz*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.z);
+//				// correggo con lo scarto quadratico medio
+//				mpu9250_handle->raw_data.data_s_xyz.accel_data_x -= sx*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.x);
+//				mpu9250_handle->raw_data.data_s_xyz.accel_data_y -= sy*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.y);
+//				mpu9250_handle->raw_data.data_s_xyz.accel_data_z -= sz*(mpu9250_handle->acc_sqm[mpu9250_handle->acc_fsr].xyz.z);
 
 				// esprimo in g
 				int16_t xg = (mpu9250_handle->raw_data.data_s_xyz.accel_data_x*1000/mpu9250_handle->acc_lsb);
