@@ -311,11 +311,21 @@ typedef union {
      int16_t z;
    } xyz;
 } mpu9250_int_3d_t;
+typedef union {
+   uint16_t array[3];
+   struct {
+     uint16_t x;
+     uint16_t y;
+     uint16_t z;
+   } xyz;
+} mpu9250_uint_3d_t;
+
+/* Accel Offsets */
 typedef mpu9250_int_3d_t mpu9250_acc_offset_t;
 typedef mpu9250_acc_offset_t* mpu9250_acc_offset_buff_t;
 
 /* Varianza */
-typedef mpu9250_int_3d_t mpu9250_acc_var_t;
+typedef mpu9250_uint_3d_t mpu9250_acc_var_t;
 typedef mpu9250_acc_var_t* mpu9250_acc_var_buff_t;
 
 /* Scarto quadratico medio */
@@ -339,7 +349,7 @@ typedef struct mpu9250_init_s {
 
     mpu9250_raw_data_t raw_data;
     mpu9250_acc_offset_t acc_offset;
-    mpu9250_acc_sqm_t acc_var[4];
+    mpu9250_acc_var_t acc_var[4];
     mpu9250_acc_sqm_t acc_sqm[4];
 	uint8_t acc_fsr;
     uint16_t acc_lsb;

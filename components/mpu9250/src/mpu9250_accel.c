@@ -79,14 +79,14 @@ static esp_err_t mpu9250_acc_calc_means(mpu9250_handle_t mpu9250_handle, int16_t
 	return ESP_OK;
 }
 
-static esp_err_t mpu9250_acc_calc_var(mpu9250_handle_t mpu9250_handle, int16_t* acc_means, int16_t* acc_var, uint8_t cycles) {
+static esp_err_t mpu9250_acc_calc_var(mpu9250_handle_t mpu9250_handle, int16_t* acc_means, uint16_t* acc_var, uint8_t cycles) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
 	printf("Calculating Acc Var with %d000 samples (wait for %d seconds)... \n", cycles, cycles);
 	acc_var[0] = 0.0f;
 	acc_var[1] = 0.0f;
 	acc_var[2] = 0.0f;
-	int64_t acc_var_64[3] = {0,0,0};
+	uint64_t acc_var_64[3] = {0,0,0};
 
 	for(int j = 0; j < cycles; j++) {
 		uint16_t max_samples = 1000;
