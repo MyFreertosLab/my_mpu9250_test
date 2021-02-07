@@ -206,19 +206,19 @@ static esp_err_t mpu9250_acc_calc_offset(mpu9250_handle_t mpu9250_handle) {
 		int16_t acc_means[3] = {0,0,0};
 		ESP_ERROR_CHECK(mpu9250_acc_calc_means(mpu9250_handle, acc_means, max_means));
 
-		if((abs(acc_means[0]) >> 2 == 0)) {
+		if((found[0] == 0) && (abs(acc_means[0]) >> 2 == 0)) {
 			found[0] = 1;
 			printf("FOUND X OFFSET\n");
 		} else {
 			mpu9250_handle->acc_offset.xyz.x -= acc_means[0];
 		}
-		if((abs(acc_means[1]) >> 2 == 0)) {
+		if((found[1] == 0) && (abs(acc_means[1]) >> 2 == 0)) {
 			found[1] = 1;
 			printf("FOUND Y OFFSET\n");
 		} else {
 			mpu9250_handle->acc_offset.xyz.y -= acc_means[1];
 		}
-		if((abs(acc_means[2] - mpu9250_handle->acc_lsb) >> 2 == 0)) {
+		if((found[2] == 0) && (abs(acc_means[2] - mpu9250_handle->acc_lsb) >> 2 == 0)) {
 			found[2] = 1;
 			printf("FOUND Z OFFSET\n");
 		} else {
