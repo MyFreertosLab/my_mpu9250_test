@@ -16,6 +16,7 @@
 #include <math.h>
 #include <mpu9250_spi.h>
 #include <mpu9250_accel.h>
+#include <mpu9250_gyro.h>
 #include <driver/gpio.h>
 
 
@@ -48,7 +49,7 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 
     // set Gyro Configuration Register
 	printf("MPU9250: Gyro +-250deg/sec\n");
-    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_GYRO_CONFIG, 0x0)); // +-250deg/sec
+	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_250DPS));
 
     // set Acc Conf1 Register
 	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_16G));
@@ -118,6 +119,10 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->raw_data.data_s_xyz.accel_data_x = ((buff[0] << 8) | buff[1]);
 	mpu9250_handle->raw_data.data_s_xyz.accel_data_y = ((buff[2] << 8) | buff[3]);
 	mpu9250_handle->raw_data.data_s_xyz.accel_data_z = ((buff[4] << 8) | buff[5]);
+	mpu9250_handle->raw_data.data_s_xyz.temp_data = ((buff[6] << 8) | buff[7]);
+	mpu9250_handle->raw_data.data_s_xyz.gyro_data_x = ((buff[8] << 8) | buff[9]);
+	mpu9250_handle->raw_data.data_s_xyz.gyro_data_y = ((buff[10] << 8) | buff[11]);
+	mpu9250_handle->raw_data.data_s_xyz.gyro_data_z = ((buff[12] << 8) | buff[13]);
 	return ret;
 }
 
@@ -136,10 +141,15 @@ esp_err_t mpu9250_display_messages(mpu9250_handle_t mpu9250_handle, uint16_t num
 		ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
 		ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 		if(i%100 == 0) {
-			printf("[%d][%d][%d]\n",
+			printf("Acc [%d][%d][%d]\n",
 					mpu9250_handle->raw_data.data_s_xyz.accel_data_x,
 					mpu9250_handle->raw_data.data_s_xyz.accel_data_y,
 					mpu9250_handle->raw_data.data_s_xyz.accel_data_z
+				  );
+			printf("Gyro [%d][%d][%d]\n",
+					mpu9250_handle->raw_data.data_s_xyz.gyro_data_x,
+					mpu9250_handle->raw_data.data_s_xyz.gyro_data_y,
+					mpu9250_handle->raw_data.data_s_xyz.gyro_data_z
 				  );
 		}
 	}

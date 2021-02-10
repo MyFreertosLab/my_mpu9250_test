@@ -194,39 +194,59 @@ static esp_err_t mpu9250_acc_calc_offset(mpu9250_handle_t mpu9250_handle) {
 
 
 	// Original Acc offsets: [6684][-5436][9684]
+	// Last: Acc offsets: [6812][-5443][9674]
 	ESP_ERROR_CHECK(mpu9250_acc_load_offset(mpu9250_handle));
 	printf("Acc offsets: [%d][%d][%d]\n", mpu9250_handle->acc_offset.xyz.x, mpu9250_handle->acc_offset.xyz.y,mpu9250_handle->acc_offset.xyz.z);
 
 	// dicard 10000 samples
 	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
 	uint8_t found[3] = {0,0,0};
+	int16_t offsets[3] = {0,0,0};
 	while(true) {
 		printf("Calculating Acc Offset ... \n");
 		uint16_t max_means = 60;
 		int16_t acc_means[3] = {0,0,0};
 		ESP_ERROR_CHECK(mpu9250_acc_calc_means(mpu9250_handle, acc_means, max_means));
 
-		if((found[0] == 0) && (abs(acc_means[0]) >> 2 == 0)) {
-			found[0] = 1;
-			printf("FOUND X OFFSET\n");
+		if((found[X_POS] == 0)) {
+			if(abs(acc_means[X_POS]) >> 1 == 0) {
+				found[X_POS] = 1;
+				offsets[X_POS] = mpu9250_handle->acc_offset.xyz.x;
+				printf("FOUND X OFFSET\n");
+			}
+			else {
+				mpu9250_handle->acc_offset.xyz.x -= acc_means[X_POS];
+			}
 		} else {
-			mpu9250_handle->acc_offset.xyz.x -= acc_means[0];
+			mpu9250_handle->acc_offset.xyz.x = offsets[X_POS];
 		}
-		if((found[1] == 0) && (abs(acc_means[1]) >> 2 == 0)) {
-			found[1] = 1;
-			printf("FOUND Y OFFSET\n");
+		if((found[Y_POS] == 0)) {
+			if(abs(acc_means[Y_POS]) >> 1 == 0) {
+				found[Y_POS] = 1;
+				offsets[Y_POS] = mpu9250_handle->acc_offset.xyz.y;
+				printf("FOUND Y OFFSET\n");
+			}
+			else {
+				mpu9250_handle->acc_offset.xyz.y -= acc_means[Y_POS];
+			}
 		} else {
-			mpu9250_handle->acc_offset.xyz.y -= acc_means[1];
+			mpu9250_handle->acc_offset.xyz.y = offsets[Y_POS];
 		}
-		if((found[2] == 0) && (abs(acc_means[2] - mpu9250_handle->acc_lsb) >> 2 == 0)) {
-			found[2] = 1;
-			printf("FOUND Z OFFSET\n");
+		if((found[Z_POS] == 0)) {
+			if(abs(acc_means[Z_POS] - mpu9250_handle->acc_lsb) >> 1 == 0) {
+				found[Z_POS] = 1;
+				offsets[Z_POS] = mpu9250_handle->acc_offset.xyz.z;
+				printf("FOUND Z OFFSET\n");
+			}
+			else {
+				mpu9250_handle->acc_offset.xyz.z -= (acc_means[Z_POS]  - mpu9250_handle->acc_lsb);
+			}
 		} else {
-			mpu9250_handle->acc_offset.xyz.z -= (acc_means[2] - mpu9250_handle->acc_lsb);
+			mpu9250_handle->acc_offset.xyz.z = offsets[Z_POS];
 		}
 
 		printf("Acc offsets: [%d][%d][%d]\n", mpu9250_handle->acc_offset.xyz.x, mpu9250_handle->acc_offset.xyz.y,mpu9250_handle->acc_offset.xyz.z);
-		printf("Acc means: [%d][%d][%d]\n", acc_means[0], acc_means[1],acc_means[2]);
+		printf("Acc means: [%d][%d][%d]\n", acc_means[X_POS], acc_means[Y_POS],acc_means[Z_POS]);
 
 		if((found[0] == 1) && (found[1] == 1) && (found[2] == 1)) {
 			break;

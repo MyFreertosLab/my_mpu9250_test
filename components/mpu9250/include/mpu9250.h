@@ -6,6 +6,9 @@
 #include "freertos/task.h"
 
 #define MPU9250_ID 0x70
+#define X_POS 0
+#define Y_POS 1
+#define Z_POS 2
 
 enum mpu9250_register {
 	MPU9250_SELF_TEST_X_GYRO =  0x00,
@@ -110,8 +113,6 @@ enum mpu9250_register {
 	MPU9250_ZA_OFFSET_L =       0x7E
 };
 #define MPU9250_WHO_AM_I_RESULT 0x70
-#define MPU9250_ACC_FSR_MASK    0xE7
-#define MPU9250_ACC_FSR_LBIT    3
 
 /*********************************
 *********** Gyroscope ************
@@ -133,8 +134,9 @@ enum gyro_fsr_e {
     NUM_GYRO_FSR
 };
 
-#define MPU9250_GYRO_FS_SEL_MASK 0x3
-#define MPU9250_GYRO_FCHOICE_MASK 0x3
+#define MPU9250_GYRO_FSR_MASK     0xE7
+#define MPU9250_GYRO_FSR_LBIT     0x03
+#define MPU9250_GYRO_FCHOICE_MASK 0x03
 
 /*********************************
 ********* Accelerometer **********
@@ -145,7 +147,9 @@ enum accel_config_bit {
 	ACCEL_CONFIG_AY_ST_EN = 6,
 	ACCEL_CONFIG_AX_ST_EN = 7,
 };
-#define MPU9250_ACCEL_FS_SEL_MASK 0x3
+#define MPU9250_ACC_FSR_MASK    0xE7
+#define MPU9250_ACC_FSR_LBIT    0x03
+
 
 enum accel_config_2_bits {
 	ACCEL_CONFIG_2_A_DLPFCFG = 0,
@@ -320,17 +324,67 @@ typedef union {
    } xyz;
 } mpu9250_uint_3d_t;
 
+/* Se necessario usare
+ * float fixed point
+ * 22bit integer, 10bit decimal
+ * precision: 1/(2^10-1) = 0,000977517
+ *
+ *
+ */
+
+/*
+ * we assume this cycle:
+ * Calc Predition:
+ *   X(k)=A*X(k-1)+B*u(k-1)
+ *   P(k)=A*P(k-1)*A'+Q
+ * Calc Update:
+ *   K(k)=P(k)H'(H*P(k)*H'+R)^(-1)
+ *   X(k)=X(k)-K(k)(Sample(k)-H*X(k))
+ *   P(k)=(I-K(k)*H)*P(k)
+ * with:
+ *   A=H=1,
+ *   B=Q=0,
+ *   R=variance of state,
+ * then:
+ *   initialization:
+ *     X(0)=fixed expected response
+ *     P(0)=1
+ *   cycle for each sample
+ *     X(k)=X(k-1)
+ *     P(k)=P(k-1)
+ *     K(k)=P(k)/(P(k)+R)
+ *     X(k)=X(k)+K(k)*(Sample(k)-X(k))
+ *     P(k)=(1-K(k))*P(k)
+ */
+typedef struct {
+	int16_t X,sample;
+	uint16_t R;
+	float P,K;
+} mpu9250_kalman_t;
+
 /* Accel Offsets */
 typedef mpu9250_int_3d_t mpu9250_acc_offset_t;
 typedef mpu9250_acc_offset_t* mpu9250_acc_offset_buff_t;
 
-/* Varianza */
+/* Accel Varianza */
 typedef mpu9250_uint_3d_t mpu9250_acc_var_t;
 typedef mpu9250_acc_var_t* mpu9250_acc_var_buff_t;
 
-/* Scarto quadratico medio */
+/* Accel Scarto quadratico medio */
 typedef mpu9250_int_3d_t mpu9250_acc_sqm_t;
 typedef mpu9250_acc_sqm_t* mpu9250_acc_sqm_buff_t;
+
+/* Gyro Offsets */
+typedef mpu9250_int_3d_t mpu9250_gyro_offset_t;
+typedef mpu9250_gyro_offset_t* mpu9250_gyro_offset_buff_t;
+
+/* Gyro Varianza */
+typedef mpu9250_uint_3d_t mpu9250_gyro_var_t;
+typedef mpu9250_gyro_var_t* mpu9250_gyro_var_buff_t;
+
+/* Gyro Scarto quadratico medio */
+typedef mpu9250_int_3d_t mpu9250_gyro_sqm_t;
+typedef mpu9250_gyro_sqm_t* mpu9250_gyro_sqm_buff_t;
 
 typedef uint8_t mpu9250_int_status_t;
 
@@ -348,11 +402,21 @@ typedef struct mpu9250_init_s {
     uint8_t whoami;
 
     mpu9250_raw_data_t raw_data;
+
+    // accelerometer
     mpu9250_acc_offset_t acc_offset;
     mpu9250_acc_var_t acc_var[4];
     mpu9250_acc_sqm_t acc_sqm[4];
+    mpu9250_kalman_t acc_kalman[4];
 	uint8_t acc_fsr;
     uint16_t acc_lsb;
+
+    // accelerometer
+    mpu9250_gyro_offset_t gyro_offset;
+    mpu9250_gyro_var_t gyro_var[4];
+    mpu9250_gyro_sqm_t gyro_sqm[4];
+	uint8_t gyro_fsr;
+    uint16_t gyro_lsb;
 
 //    // raw data
 //    mpu9250_raw_data_t mpu9250_raw_data_buff;
