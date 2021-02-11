@@ -26,7 +26,7 @@ void my_mpu9250_acc_static_calibration(mpu9250_handle_t mpu9250_handle) {
 
 
 typedef struct {
-	int16_t data[10];
+	int16_t data[20];
 	uint8_t cursor;
 } my_mpu9250_circular_buffer_t;
 typedef my_mpu9250_circular_buffer_t* my_mpu9250_circular_buffer_p_t;
@@ -37,15 +37,15 @@ void my_mpu9250_cb_init(my_mpu9250_circular_buffer_p_t cb) {
 
 void my_mpu9250_cb_add(my_mpu9250_circular_buffer_p_t cb, int16_t val) {
 	cb->cursor++;
-	cb->cursor %= 10;
+	cb->cursor %= 20;
 	cb->data[cb->cursor] = val;
 }
 void my_mpu9250_cb_means(my_mpu9250_circular_buffer_p_t cb, int16_t* mean) {
 	int64_t sum = 0;
-	for(uint8_t i = 0; i < 10; i++) {
+	for(uint8_t i = 0; i < 20; i++) {
 		sum += cb->data[i];
 	}
-	*mean = sum/10;
+	*mean = sum/20;
 }
 
 /*
@@ -89,7 +89,7 @@ void my_mpu9250_acc_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 	my_mpu9250_circular_buffer_t cbt;
 	my_mpu9250_circular_buffer_p_t cb = &cbt;
 	my_mpu9250_cb_init(cb);
-	for(uint8_t i = 0; i < 10; i++) {
+	for(uint8_t i = 0; i < 20; i++) {
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
 			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 			my_mpu9250_cb_add(cb, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
@@ -98,13 +98,10 @@ void my_mpu9250_acc_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 
 	// read cycle
 	uint32_t counter = 0;
-	int32_t k_err_means_sum = 0;
-	int32_t err_means_sum = 0;
+	int64_t k_err_means_sum = 0;
+	int64_t err_means_sum = 0;
 	while (true) {
 		counter++;
-		int16_t KXprev = acc_z_kalman.X;
-        int16_t Xprev = mpu9250_handle->raw_data.data_s_xyz.accel_data_z;
-
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
 			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 			my_mpu9250_cb_add(cb, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
@@ -122,11 +119,11 @@ void my_mpu9250_acc_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 			acc_z_kalman.K = acc_z_kalman.P/(acc_z_kalman.P+acc_z_kalman.R);
 			acc_z_kalman.X = acc_z_kalman.X + acc_z_kalman.K*(acc_z_kalman.sample - acc_z_kalman.X);
 			acc_z_kalman.P=(1-acc_z_kalman.K)*acc_z_kalman.P;
-			k_err_means_sum += (acc_z_kalman.X - KXprev);
-			err_means_sum += (acc_z_kalman.sample - Xprev);
+			k_err_means_sum += (acc_z_kalman.X - mpu9250_handle->acc_lsb);
+			err_means_sum += (acc_z_kalman.sample - mpu9250_handle->acc_lsb);
 			if(counter%100 == 0) {
-				float knoise = k_err_means_sum/100.f;
-				float noise = err_means_sum/100.f;
+				float knoise = 1.0f*(k_err_means_sum/counter);
+				float noise = 1.0f*(err_means_sum/counter);
 				// esprimo in g
 				int16_t xg = (mpu9250_handle->raw_data.data_s_xyz.accel_data_x*1000/mpu9250_handle->acc_lsb);
 				int16_t yg = (mpu9250_handle->raw_data.data_s_xyz.accel_data_y*1000/mpu9250_handle->acc_lsb);
@@ -137,10 +134,8 @@ void my_mpu9250_acc_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 //				printf("Acc_Y_H/L/V [%d][%d]\n", yg, mpu9250_handle->raw_data.data_s_xyz.accel_data_y);
 //				printf("Acc_Z_H/L/V [%d][%d]\n", zg, mpu9250_handle->raw_data.data_s_xyz.accel_data_z);
 				printf("Kalman KE[%3.5f],E[%3.5f],X[%d],P[%3.5f],K[%3.8f],Z[%d],zgc[%d],zg[%d]\n",
-						knoise, noise, acc_z_kalman.X, acc_z_kalman.P, acc_z_kalman.K, mpu9250_handle->raw_data.data_s_xyz.accel_data_z,zgc, zg);
+						knoise, noise, acc_z_kalman.X, acc_z_kalman.P, acc_z_kalman.K, acc_z_kalman.sample,zgc, zg);
 
-				k_err_means_sum = 0;
-				err_means_sum = 0;
 			}
 
 //			if(counter <= 20000) {
