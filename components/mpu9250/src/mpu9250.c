@@ -34,6 +34,24 @@ static void IRAM_ATTR mpu9250_isr(void* mpu9250_handle)
 		portYIELD_FROM_ISR(); // this wakes up sample_timer_task immediately
 	}
 }
+void mpu9250_cb_init(mpu9250_cb_handle_t cb) {
+	cb->cursor = -1;
+	memset(cb, 0, sizeof(mpu9250_cb_t));
+}
+
+void mpu9250_cb_add(mpu9250_cb_handle_t cb, int16_t val) {
+	cb->cursor++;
+	cb->cursor %= CIRCULAR_BUFFER_SIZE;
+	cb->data[cb->cursor] = val;
+}
+void mpu9250_cb_means(mpu9250_cb_handle_t cb, int16_t* mean) {
+	int64_t sum = 0;
+	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
+		sum += cb->data[i];
+	}
+	*mean = sum/CIRCULAR_BUFFER_SIZE;
+}
+
 
 /************************************************************************
  ****************** A P I  I M P L E M E N T A T I O N ******************
@@ -42,6 +60,11 @@ static void IRAM_ATTR mpu9250_isr(void* mpu9250_handle)
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_spi_init(mpu9250_handle));
 	mpu9250_handle->data_ready_task_handle=xTaskGetCurrentTaskHandle();
+
+	for(uint8_t i = 0; i < 3; i++) {
+		mpu9250_cb_init(&mpu9250_handle->accel.cb[i]);
+		mpu9250_cb_init(&mpu9250_handle->gyro.cb[i]);
+	}
 
     // set Configuration Register
 	printf("MPU9250: Gyro bandwidth 184Hz\n");
@@ -67,7 +90,6 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
     // set Int Status Register
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_STATUS, 0x00)); // reset all interrupts?
 
-    // set Int Enable Register
 	printf("MPU9250: Enable Interrupts\n");
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_ENABLE, 0x01)); // data ready int
 
@@ -87,6 +109,14 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(gpio_install_isr_service(ESP_INTR_FLAG_IRAM));
 	ESP_ERROR_CHECK(gpio_isr_handler_add(mpu9250_handle->int_pin, mpu9250_isr, (void*)mpu9250_handle));
 	printf("MPU9250: Gpio interrupts configured ..\n");
+
+    // Init Accel
+	printf("MPU9250: Init Accel\n");
+    ESP_ERROR_CHECK(mpu9250_acc_init(mpu9250_handle));
+
+    // Init Gyro
+	printf("MPU9250: Init Gyro\n");
+    ESP_ERROR_CHECK(mpu9250_gyro_init(mpu9250_handle));
 
     return ESP_OK;
 }
@@ -123,7 +153,20 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->raw_data.data_s_xyz.gyro_data_x = ((buff[8] << 8) | buff[9]);
 	mpu9250_handle->raw_data.data_s_xyz.gyro_data_y = ((buff[10] << 8) | buff[11]);
 	mpu9250_handle->raw_data.data_s_xyz.gyro_data_z = ((buff[12] << 8) | buff[13]);
+
+	for(uint8_t i = 0; i < 3; i++) {
+		mpu9250_cb_add(&mpu9250_handle->accel.cb[i], mpu9250_handle->raw_data.data_s_vector.accel[i]);
+		mpu9250_cb_add(&mpu9250_handle->gyro.cb[i], mpu9250_handle->raw_data.data_s_vector.gyro[i]);
+	}
+
 	return ret;
+}
+
+esp_err_t mpu9250_load_data(mpu9250_handle_t mpu9250_handle) {
+	ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_acc_filter_data(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_gyro_filter_data(mpu9250_handle));
+	return ESP_OK;
 }
 
 esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs) {

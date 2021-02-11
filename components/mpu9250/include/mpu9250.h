@@ -283,30 +283,9 @@ enum clock_sel_e {
     INV_CLK_PLL,
     NUM_CLK
 };
-
 /*********************************
-********** MPU9250 API ***********
+*********** Utilities ************
 *********************************/
-typedef union {
-   struct {
-     int16_t accel[3];
-     int16_t temp;
-     int16_t gyro[3];
-     int16_t ext[12];
-   } data_s_vector;
-   struct {
-     int16_t accel_data_x;
-     int16_t accel_data_y;
-     int16_t accel_data_z;
-     int16_t temp_data;
-     int16_t gyro_data_x;
-     int16_t gyro_data_y;
-     int16_t gyro_data_z;
-     int16_t ext_data[12];
-   } data_s_xyz;
-} mpu9250_raw_data_t;
-typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
-
 typedef union {
    int16_t array[3];
    struct {
@@ -363,32 +342,80 @@ typedef struct {
 	float P,Q,K;
 } mpu9250_kalman_t;
 
-/* Accel Offsets */
-typedef mpu9250_int_3d_t mpu9250_acc_offset_t;
-typedef mpu9250_acc_offset_t* mpu9250_acc_offset_buff_t;
+/* Offsets */
+typedef mpu9250_int_3d_t mpu9250_offset_t;
+typedef mpu9250_offset_t* mpu9250_offset_buff_t;
 
-/* Accel Varianza */
-typedef mpu9250_uint_3d_t mpu9250_acc_var_t;
-typedef mpu9250_acc_var_t* mpu9250_acc_var_buff_t;
+/* Varianza */
+typedef mpu9250_uint_3d_t mpu9250_var_t;
+typedef mpu9250_var_t* mpu9250_var_buff_t;
 
-/* Accel Scarto quadratico medio */
-typedef mpu9250_int_3d_t mpu9250_acc_sqm_t;
-typedef mpu9250_acc_sqm_t* mpu9250_acc_sqm_buff_t;
+/* Scarto quadratico medio */
+typedef mpu9250_int_3d_t mpu9250_sqm_t;
+typedef mpu9250_sqm_t* mpu9250_sqm_buff_t;
 
-/* Gyro Offsets */
-typedef mpu9250_int_3d_t mpu9250_gyro_offset_t;
-typedef mpu9250_gyro_offset_t* mpu9250_gyro_offset_buff_t;
+/* Circular Buffer */
+#define CIRCULAR_BUFFER_SIZE 30
+typedef struct {
+	int16_t data[CIRCULAR_BUFFER_SIZE];
+	uint8_t cursor;
+} mpu9250_cb_t;
+typedef mpu9250_cb_t* mpu9250_cb_handle_t;
 
-/* Gyro Varianza */
-typedef mpu9250_uint_3d_t mpu9250_gyro_var_t;
-typedef mpu9250_gyro_var_t* mpu9250_gyro_var_buff_t;
+/********************************************************************************************************************
+********** MPU9250 API **********************************************************************************************
+********************************************************************************************************************/
+typedef union {
+   struct {
+     int16_t accel[3];
+     int16_t temp;
+     int16_t gyro[3];
+     int16_t ext[12];
+   } data_s_vector;
+   struct {
+     int16_t accel_data_x;
+     int16_t accel_data_y;
+     int16_t accel_data_z;
+     int16_t temp_data;
+     int16_t gyro_data_x;
+     int16_t gyro_data_y;
+     int16_t gyro_data_z;
+     int16_t ext_data[12];
+   } data_s_xyz;
+} mpu9250_raw_data_t;
+typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
 
-/* Gyro Scarto quadratico medio */
-typedef mpu9250_int_3d_t mpu9250_gyro_sqm_t;
-typedef mpu9250_gyro_sqm_t* mpu9250_gyro_sqm_buff_t;
+/*********************************
+********* ACCELEROMETER **********
+*********************************/
+typedef struct mpu9250_accel_s {
+    mpu9250_offset_t offset;
+    mpu9250_var_t var[4];
+    mpu9250_sqm_t sqm[4];
+    mpu9250_kalman_t kalman[4];
+	uint8_t fsr;
+    uint16_t lsb;
+	mpu9250_cb_t cb[3];
+} mpu9250_accel_t;
+
+/*********************************
+*********** GYROSCOPE ************
+*********************************/
+typedef struct mpu9250_gyro_s {
+    mpu9250_offset_t offset;
+    mpu9250_var_t var[4];
+    mpu9250_sqm_t sqm[4];
+    mpu9250_kalman_t kalman[4];
+	uint8_t fsr;
+    uint16_t lsb;
+	mpu9250_cb_t cb[3];
+} mpu9250_gyro_t;
 
 typedef uint8_t mpu9250_int_status_t;
 
+/*********************************
+******** MPU9250 HANDLE **********
+*********************************/
 typedef struct mpu9250_init_s {
 	spi_bus_config_t buscfg;
 	spi_device_interface_config_t devcfg;
@@ -404,35 +431,25 @@ typedef struct mpu9250_init_s {
 
     mpu9250_raw_data_t raw_data;
 
-    // accelerometer
-    mpu9250_acc_offset_t acc_offset;
-    mpu9250_acc_var_t acc_var[4];
-    mpu9250_acc_sqm_t acc_sqm[4];
-    mpu9250_kalman_t acc_kalman[4];
-	uint8_t acc_fsr;
-    uint16_t acc_lsb;
-
-    // gyroscope
-    mpu9250_gyro_offset_t gyro_offset;
-    mpu9250_gyro_var_t gyro_var[4];
-    mpu9250_gyro_sqm_t gyro_sqm[4];
-	uint8_t gyro_fsr;
-    uint16_t gyro_lsb;
-
-//    // raw data
-//    mpu9250_raw_data_t mpu9250_raw_data_buff;
-
+    mpu9250_accel_t accel;
+    mpu9250_gyro_t gyro;
 } mpu9250_init_t;
+
 typedef mpu9250_init_t* mpu9250_handle_t;
 
 #define MPU9250_READ_FLAG 0x80
 
+/* Private Methods */
+void mpu9250_cb_means(mpu9250_cb_handle_t cb, int16_t* mean);
+
+/* Public Methids */
 /* Set up APIs */
 esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_whoami(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_int_status(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_load_data(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs);
 esp_err_t mpu9250_display_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs);
 
