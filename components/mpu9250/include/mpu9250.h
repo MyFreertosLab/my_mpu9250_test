@@ -349,9 +349,10 @@ typedef union {
  *   initialization:
  *     X(0)=fixed expected response
  *     P(0)=1
+ *     Q=1.5
  *   cycle for each sample
  *     X(k)=X(k-1)
- *     P(k)=P(k-1)
+ *     P(k)=P(k-1)+Q
  *     K(k)=P(k)/(P(k)+R)
  *     X(k)=X(k)+K(k)*(Sample(k)-X(k))
  *     P(k)=(1-K(k))*P(k)
@@ -359,7 +360,7 @@ typedef union {
 typedef struct {
 	int16_t X,sample;
 	uint16_t R;
-	float P,K;
+	float P,Q,K;
 } mpu9250_kalman_t;
 
 /* Accel Offsets */
@@ -411,7 +412,7 @@ typedef struct mpu9250_init_s {
 	uint8_t acc_fsr;
     uint16_t acc_lsb;
 
-    // accelerometer
+    // gyroscope
     mpu9250_gyro_offset_t gyro_offset;
     mpu9250_gyro_var_t gyro_var[4];
     mpu9250_gyro_sqm_t gyro_sqm[4];
