@@ -150,42 +150,72 @@ void my_mpu9250_gyro_static_calibration(mpu9250_handle_t mpu9250_handle) {
 void my_mpu9250_gyro_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 	uint32_t counter = 0;
+	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_2000DPS));
+	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
 
+	double attitude[3] = {0.0f,0.0f,1.0f};
+	double roll = 0.0f;
 	while (true) {
 		counter++;
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
-			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
+			ESP_ERROR_CHECK(mpu9250_load_data(mpu9250_handle));
+			double w[3] = {0.0f,0.0f,0.0f};
+			for(uint8_t i = X_POS; i <= Z_POS; i++) {
+				w[i] = (double)(mpu9250_handle->gyro.kalman[i].X)/(double)mpu9250_handle->gyro.lsb/(double)1000.0f;
+			}
+			// calc rotation
+			double cx=cos(w[X_POS]);
+			double cy=cos(w[Y_POS]);
+			double cz=cos(w[Z_POS]);
+			double sx=sin(w[X_POS]);
+			double sy=sin(w[Y_POS]);
+			double sz=sin(w[Z_POS]);
+//			double ax = (cz*cy)*attitude[X_POS] + (cz*sy*sx-sz*cx)*attitude[Y_POS] + (cz*sy*cx+sz*sx)*attitude[Z_POS];
+//			double ay = (sz*cy)*attitude[X_POS] + (sz*sy*sx+cz*cx)*attitude[Y_POS] + (sz*sy*cx-cz*sx)*attitude[Z_POS];
+//			double az = (-sy)*attitude[X_POS] + (cy*sx)*attitude[Y_POS] + (cy*cx)*attitude[Z_POS];
 
+			// roll Only
+			double ax = attitude[X_POS];
+			double ay = (cx)*attitude[Y_POS] + (-sx)*attitude[Z_POS];
+			double az = (sx)*attitude[Y_POS] + (cx)*attitude[Z_POS];
+			roll += w[X_POS];
+			attitude[X_POS] = ax;
+			attitude[Y_POS] = ay;
+			attitude[Z_POS] = az;
+
+//			float modq = attitude[X_POS]*attitude[X_POS] + attitude[Y_POS]*attitude[Y_POS] + attitude[Z_POS]*attitude[Z_POS];
+//			attitude[X_POS] = attitude[X_POS]/sqrt(modq);
+//			attitude[Y_POS] = attitude[Y_POS]/sqrt(modq);
+//			attitude[Z_POS] = attitude[Z_POS]/sqrt(modq);
 			if(counter%100 == 0) {
-				// esprimo in g
+				// esprimo in (rad/1000/sec)
 				int16_t mxrs = (mpu9250_handle->raw_data.data_s_xyz.gyro_data_x*1000/mpu9250_handle->gyro.lsb);
 				int16_t myrs = (mpu9250_handle->raw_data.data_s_xyz.gyro_data_y*1000/mpu9250_handle->gyro.lsb);
 				int16_t mzrs = (mpu9250_handle->raw_data.data_s_xyz.gyro_data_z*1000/mpu9250_handle->gyro.lsb);
-
-				printf("Gyro_X_H/L/V [%d][%d]\n", mxrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_x);
-				printf("Gyro_Y_H/L/V [%d][%d]\n", myrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_y);
-				printf("Gyro_Z_H/L/V [%d][%d]\n", mzrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_z);
+				printf("Gyro_X_H/L/V X[%d][%d] Y[%d][%d] Z[%d][%d]\n", mxrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_x, myrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_y, mzrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_z);
+				printf("Gyro_X_H/L/V KX[%2.5f] KY[%2.5f] KZ[%2.5f]\n", w[X_POS], w[Y_POS], w[Z_POS]);
+				printf("Gyro Att: [%2.5f][%2.5f][%2.5f] R[%2.5f]\n", attitude[X_POS], attitude[Y_POS], attitude[Z_POS], roll);
 			}
 
-			if(counter <= 20000) {
-				if(mpu9250_handle->gyro.fsr != INV_FSR_250DPS) {
-					ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_250DPS));
-				}
-			} else if(counter > 20000 && counter <= 40000) {
-				if(mpu9250_handle->gyro.fsr != INV_FSR_500DPS) {
-					ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_500DPS));
-				}
-			} else if(counter > 40000 && counter <= 60000) {
-				if(mpu9250_handle->gyro.fsr != INV_FSR_1000DPS) {
-					ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_1000DPS));
-				}
-			} else if(counter > 60000 && counter <= 80000) {
-				if(mpu9250_handle->gyro.fsr != INV_FSR_2000DPS) {
-					ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_2000DPS));
-				}
-			} else if(counter > 80000) {
-			    counter = 0;
-			}
+//			if(counter <= 20000) {
+//				if(mpu9250_handle->gyro.fsr != INV_FSR_250DPS) {
+//					ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_250DPS));
+//				}
+//			} else if(counter > 20000 && counter <= 40000) {
+//				if(mpu9250_handle->gyro.fsr != INV_FSR_500DPS) {
+//					ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_500DPS));
+//				}
+//			} else if(counter > 40000 && counter <= 60000) {
+//				if(mpu9250_handle->gyro.fsr != INV_FSR_1000DPS) {
+//					ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_1000DPS));
+//				}
+//			} else if(counter > 60000 && counter <= 80000) {
+//				if(mpu9250_handle->gyro.fsr != INV_FSR_2000DPS) {
+//					ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_2000DPS));
+//				}
+//			} else if(counter > 80000) {
+//			    counter = 0;
+//			}
 	    } else {
 	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
 			if(counter%100 == 0) {
@@ -204,10 +234,10 @@ void my_mpu9250_task(void *arg) {
 	ESP_ERROR_CHECK(mpu9250_init(mpu9250_handle));
 
 //	// Gyro
-//	my_mpu9250_gyro_static_calibration(mpu9250_handle);
-//	my_mpu9250_gyro_read_data_cycle(mpu9250_handle);
+	my_mpu9250_gyro_static_calibration(mpu9250_handle);
+	my_mpu9250_gyro_read_data_cycle(mpu9250_handle);
 
 	// Accelerometer
-	my_mpu9250_acc_static_calibration(mpu9250_handle);
-	my_mpu9250_acc_read_data_cycle(mpu9250_handle);
+//	my_mpu9250_acc_static_calibration(mpu9250_handle);
+//	my_mpu9250_acc_read_data_cycle(mpu9250_handle);
 }

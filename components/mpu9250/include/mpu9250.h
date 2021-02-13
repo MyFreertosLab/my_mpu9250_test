@@ -407,7 +407,7 @@ typedef struct mpu9250_gyro_s {
     mpu9250_sqm_t sqm[4];
     mpu9250_kalman_t kalman[4];
 	uint8_t fsr;
-    uint16_t lsb;
+    float lsb;
 	mpu9250_cb_t cb[3];
 } mpu9250_gyro_t;
 

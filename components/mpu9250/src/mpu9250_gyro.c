@@ -180,7 +180,24 @@ static esp_err_t mpu9250_gyro_calc_biases(mpu9250_handle_t mpu9250_handle) {
 }
 
 static esp_err_t mpu9250_gyro_calc_lsb(mpu9250_handle_t mpu9250_handle) {
-	mpu9250_handle->gyro.lsb = (32768 >> (mpu9250_handle->gyro.fsr + 1));
+	switch(mpu9250_handle->gyro.fsr) {
+	case(INV_FSR_2000DPS): {
+		mpu9250_handle->gyro.lsb = 16.384;
+		break;
+	}
+	case(INV_FSR_1000DPS): {
+		mpu9250_handle->gyro.lsb = 32.768;
+		break;
+	}
+	case(INV_FSR_500DPS): {
+		mpu9250_handle->gyro.lsb = 65.536;
+		break;
+	}
+	case(INV_FSR_250DPS): {
+		mpu9250_handle->gyro.lsb = 131.072;
+		break;
+	}
+	}
 	return ESP_OK;
 }
 
@@ -207,6 +224,8 @@ static esp_err_t mpu9250_gyro_calc_offset(mpu9250_handle_t mpu9250_handle) {
 
 
 	// Original Gyro offsets: Gyro offsets: [455][-11][-17]]
+	// Gyro offsets: [354][-34][-15]
+
 	ESP_ERROR_CHECK(mpu9250_gyro_load_offset(mpu9250_handle));
 	printf("Gyro offsets: [%d][%d][%d]\n", mpu9250_handle->gyro.offset.xyz.x, mpu9250_handle->gyro.offset.xyz.y,mpu9250_handle->gyro.offset.xyz.z);
 
@@ -227,10 +246,10 @@ static esp_err_t mpu9250_gyro_calc_offset(mpu9250_handle_t mpu9250_handle) {
 				printf("FOUND X OFFSET\n");
 			}
 			else {
-				mpu9250_handle->gyro.offset.xyz.z -= gyro_means[X_POS];
+				mpu9250_handle->gyro.offset.xyz.x -= gyro_means[X_POS];
 			}
 		} else {
-			mpu9250_handle->gyro.offset.xyz.z = offsets[X_POS];
+			mpu9250_handle->gyro.offset.xyz.x = offsets[X_POS];
 		}
 		if((found[Y_POS] == 0)) {
 			if(abs(gyro_means[Y_POS]) == 0) {
@@ -239,19 +258,19 @@ static esp_err_t mpu9250_gyro_calc_offset(mpu9250_handle_t mpu9250_handle) {
 				printf("FOUND Y OFFSET\n");
 			}
 			else {
-				mpu9250_handle->gyro.offset.xyz.z -= gyro_means[Y_POS];
+				mpu9250_handle->gyro.offset.xyz.y -= gyro_means[Y_POS];
 			}
 		} else {
-			mpu9250_handle->gyro.offset.xyz.z = offsets[Y_POS];
+			mpu9250_handle->gyro.offset.xyz.y = offsets[Y_POS];
 		}
 		if((found[Z_POS] == 0)) {
 			if(abs(gyro_means[Z_POS]) == 0) {
 				found[Z_POS] = 1;
-				offsets[Z_POS] = mpu9250_handle->gyro.offset.xyz.y;
+				offsets[Z_POS] = mpu9250_handle->gyro.offset.xyz.z;
 				printf("FOUND Z OFFSET\n");
 			}
 			else {
-				mpu9250_handle->gyro.offset.xyz.z -= gyro_means[Z_POS];
+				mpu9250_handle->gyro.offset.xyz.z -= (gyro_means[Z_POS]);
 			}
 		} else {
 			mpu9250_handle->gyro.offset.xyz.z = offsets[Z_POS];
