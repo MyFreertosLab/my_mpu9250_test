@@ -138,30 +138,35 @@ void my_mpu9250_temperature_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 }
 
 void my_mpu9250_gyro_static_calibration(mpu9250_handle_t mpu9250_handle) {
+	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 	// calibration offset and biases
 	ESP_ERROR_CHECK(mpu9250_gyro_calibrate(mpu9250_handle));
 
 
-	// set gyroel full scale range = 4G
-	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_2000DPS));
-	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
-
+	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
+		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
+			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
+		}
+	}
 }
 void my_mpu9250_gyro_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 	uint32_t counter = 0;
-	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_2000DPS));
+	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_1000DPS));
 	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
 
 	double attitude[3] = {0.0f,0.0f,1.0f};
 	double roll = 0.0f;
+	double pitch = 0.0f;
+	double yaw = 0.0f;
 	while (true) {
 		counter++;
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
 			ESP_ERROR_CHECK(mpu9250_load_data(mpu9250_handle));
+			// angolo di rotazione: w(i)=domega(i)*dt espressa in rad
 			double w[3] = {0.0f,0.0f,0.0f};
 			for(uint8_t i = X_POS; i <= Z_POS; i++) {
-				w[i] = (double)(mpu9250_handle->gyro.kalman[i].X)/(double)mpu9250_handle->gyro.lsb/(double)1000.0f;
+				w[i] = (double)(mpu9250_handle->gyro.kalman[i].X)/(double)mpu9250_handle->gyro.lsb/(double)1000.0f/(double)360.0f*(double)6.283185307f;
 			}
 			// calc rotation
 			double cx=cos(w[X_POS]);
@@ -170,31 +175,31 @@ void my_mpu9250_gyro_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 			double sx=sin(w[X_POS]);
 			double sy=sin(w[Y_POS]);
 			double sz=sin(w[Z_POS]);
-//			double ax = (cz*cy)*attitude[X_POS] + (cz*sy*sx-sz*cx)*attitude[Y_POS] + (cz*sy*cx+sz*sx)*attitude[Z_POS];
-//			double ay = (sz*cy)*attitude[X_POS] + (sz*sy*sx+cz*cx)*attitude[Y_POS] + (sz*sy*cx-cz*sx)*attitude[Z_POS];
-//			double az = (-sy)*attitude[X_POS] + (cy*sx)*attitude[Y_POS] + (cy*cx)*attitude[Z_POS];
+			double ax = (cz*cy)*attitude[X_POS] + (cz*sy*sx-sz*cx)*attitude[Y_POS] + (cz*sy*cx+sz*sx)*attitude[Z_POS];
+			double ay = (sz*cy)*attitude[X_POS] + (sz*sy*sx+cz*cx)*attitude[Y_POS] + (sz*sy*cx-cz*sx)*attitude[Z_POS];
+			double az = (-sy)*attitude[X_POS] + (cy*sx)*attitude[Y_POS] + (cy*cx)*attitude[Z_POS];
 
-			// roll Only
-			double ax = attitude[X_POS];
-			double ay = (cx)*attitude[Y_POS] + (-sx)*attitude[Z_POS];
-			double az = (sx)*attitude[Y_POS] + (cx)*attitude[Z_POS];
+			// roll rotation Only
+//			double ax = attitude[X_POS];
+//			double ay = ((cx)*attitude[Y_POS] + (-sx)*attitude[Z_POS]);
+//			double az = (sx)*attitude[Y_POS] + (cx)*attitude[Z_POS];
+
 			roll += w[X_POS];
+			pitch += w[Y_POS];
+			yaw += w[Z_POS];
+
 			attitude[X_POS] = ax;
 			attitude[Y_POS] = ay;
 			attitude[Z_POS] = az;
 
-//			float modq = attitude[X_POS]*attitude[X_POS] + attitude[Y_POS]*attitude[Y_POS] + attitude[Z_POS]*attitude[Z_POS];
-//			attitude[X_POS] = attitude[X_POS]/sqrt(modq);
-//			attitude[Y_POS] = attitude[Y_POS]/sqrt(modq);
-//			attitude[Z_POS] = attitude[Z_POS]/sqrt(modq);
+			float modq = attitude[X_POS]*attitude[X_POS] + attitude[Y_POS]*attitude[Y_POS] + attitude[Z_POS]*attitude[Z_POS];
+			attitude[X_POS] = attitude[X_POS]/sqrt(modq);
+			attitude[Y_POS] = attitude[Y_POS]/sqrt(modq);
+			attitude[Z_POS] = attitude[Z_POS]/sqrt(modq);
+
 			if(counter%100 == 0) {
-				// esprimo in (rad/1000/sec)
-				int16_t mxrs = (mpu9250_handle->raw_data.data_s_xyz.gyro_data_x*1000/mpu9250_handle->gyro.lsb);
-				int16_t myrs = (mpu9250_handle->raw_data.data_s_xyz.gyro_data_y*1000/mpu9250_handle->gyro.lsb);
-				int16_t mzrs = (mpu9250_handle->raw_data.data_s_xyz.gyro_data_z*1000/mpu9250_handle->gyro.lsb);
-				printf("Gyro_X_H/L/V X[%d][%d] Y[%d][%d] Z[%d][%d]\n", mxrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_x, myrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_y, mzrs, mpu9250_handle->raw_data.data_s_xyz.gyro_data_z);
-				printf("Gyro_X_H/L/V KX[%2.5f] KY[%2.5f] KZ[%2.5f]\n", w[X_POS], w[Y_POS], w[Z_POS]);
-				printf("Gyro Att: [%2.5f][%2.5f][%2.5f] R[%2.5f]\n", attitude[X_POS], attitude[Y_POS], attitude[Z_POS], roll);
+				printf("S[%d][%d][%d] X[%d][%d][%d] W[%2.5f][%2.5f][%2.5f]\n", mpu9250_handle->gyro.kalman[X_POS].sample, mpu9250_handle->gyro.kalman[Y_POS].sample, mpu9250_handle->gyro.kalman[Z_POS].sample, mpu9250_handle->gyro.kalman[X_POS].X , mpu9250_handle->gyro.kalman[Y_POS].X, mpu9250_handle->gyro.kalman[Z_POS].X,w[X_POS], w[Y_POS], w[Z_POS]);
+				printf("A[%2.5f][%2.5f][%2.5f] RPY[%2.5f][%2.5f][%2.5f]\n", attitude[X_POS], attitude[Y_POS], attitude[Z_POS], roll*(double)360.0f/(double)6.283185307f, pitch*(double)360.0f/(double)6.283185307f, yaw*(double)360.0f/(double)6.283185307f);
 			}
 
 //			if(counter <= 20000) {
@@ -234,7 +239,7 @@ void my_mpu9250_task(void *arg) {
 	ESP_ERROR_CHECK(mpu9250_init(mpu9250_handle));
 
 //	// Gyro
-	my_mpu9250_gyro_static_calibration(mpu9250_handle);
+//	my_mpu9250_gyro_static_calibration(mpu9250_handle);
 	my_mpu9250_gyro_read_data_cycle(mpu9250_handle);
 
 	// Accelerometer

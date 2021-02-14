@@ -355,7 +355,7 @@ typedef mpu9250_int_3d_t mpu9250_sqm_t;
 typedef mpu9250_sqm_t* mpu9250_sqm_buff_t;
 
 /* Circular Buffer */
-#define CIRCULAR_BUFFER_SIZE 30
+#define CIRCULAR_BUFFER_SIZE 5
 typedef struct {
 	int16_t data[CIRCULAR_BUFFER_SIZE];
 	uint8_t cursor;
@@ -392,7 +392,7 @@ typedef struct mpu9250_accel_s {
     mpu9250_offset_t offset;
     mpu9250_var_t var[4];
     mpu9250_sqm_t sqm[4];
-    mpu9250_kalman_t kalman[4];
+    mpu9250_kalman_t kalman[3];
 	uint8_t fsr;
     uint16_t lsb;
 	mpu9250_cb_t cb[3];
@@ -405,7 +405,7 @@ typedef struct mpu9250_gyro_s {
     mpu9250_offset_t offset;
     mpu9250_var_t var[4];
     mpu9250_sqm_t sqm[4];
-    mpu9250_kalman_t kalman[4];
+    mpu9250_kalman_t kalman[3];
 	uint8_t fsr;
     float lsb;
 	mpu9250_cb_t cb[3];
