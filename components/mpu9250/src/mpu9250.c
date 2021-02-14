@@ -93,6 +93,10 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	printf("MPU9250: Enable Interrupts\n");
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_ENABLE, 0x01)); // data ready int
 
+    mpu9250_handle->attitude[X_POS] = 0.0f;
+    mpu9250_handle->attitude[Y_POS] = 0.0f;
+    mpu9250_handle->attitude[Z_POS] = 1.0f;
+
 	// prepare GPIO Interrupt
 	printf("MPU9250: Gpio interrupt pin [%d]\n", mpu9250_handle->int_pin);
     gpio_config_t io_conf={
@@ -166,6 +170,41 @@ esp_err_t mpu9250_load_data(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_acc_filter_data(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_gyro_filter_data(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_acc_calc_rpy(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_gyro_calc_rpy(mpu9250_handle));
+	mpu9250_handle->gyro.roll += 0.12*(mpu9250_handle->accel.roll - mpu9250_handle->gyro.roll);
+	mpu9250_handle->gyro.pitch += 0.12*(mpu9250_handle->accel.pitch - mpu9250_handle->gyro.pitch);
+
+	// angolo percorso: velocità*dt
+	double w[3] = {0.0f,0.0f,0.0f};
+	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+		w[i] = (double)(mpu9250_handle->gyro.kalman[i].X)/(double)mpu9250_handle->gyro.lsb/(double)1000.0f/(double)360.0f*(double)6.283185307f;
+	}
+
+	// calc rotation
+	double cx=cos(w[X_POS]);
+	double cy=cos(w[Y_POS]);
+	double cz=cos(w[Z_POS]);
+	double sx=sin(w[X_POS]);
+	double sy=sin(w[Y_POS]);
+	double sz=sin(w[Z_POS]);
+	double ax = (cz*cy)*mpu9250_handle->attitude[X_POS] + (cz*sy*sx-sz*cx)*mpu9250_handle->attitude[Y_POS] + (cz*sy*cx+sz*sx)*mpu9250_handle->attitude[Z_POS];
+	double ay = (sz*cy)*mpu9250_handle->attitude[X_POS] + (sz*sy*sx+cz*cx)*mpu9250_handle->attitude[Y_POS] + (sz*sy*cx-cz*sx)*mpu9250_handle->attitude[Z_POS];
+	double az = (-sy)*mpu9250_handle->attitude[X_POS] + (cy*sx)*mpu9250_handle->attitude[Y_POS] + (cy*cx)*mpu9250_handle->attitude[Z_POS];
+
+
+	mpu9250_handle->attitude[X_POS] = ax;
+	mpu9250_handle->attitude[Y_POS] = ay;
+	mpu9250_handle->attitude[Z_POS] = az;
+
+	float modq = mpu9250_handle->attitude[X_POS]*mpu9250_handle->attitude[X_POS] +
+			     mpu9250_handle->attitude[Y_POS]*mpu9250_handle->attitude[Y_POS] +
+				 mpu9250_handle->attitude[Z_POS]*mpu9250_handle->attitude[Z_POS];
+	mpu9250_handle->attitude[X_POS] = mpu9250_handle->attitude[X_POS]/sqrt(modq);
+	mpu9250_handle->attitude[Y_POS] = mpu9250_handle->attitude[Y_POS]/sqrt(modq);
+	mpu9250_handle->attitude[Z_POS] = mpu9250_handle->attitude[Z_POS]/sqrt(modq);
+
+
 	return ESP_OK;
 }
 

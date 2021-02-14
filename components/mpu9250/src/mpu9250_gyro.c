@@ -296,44 +296,44 @@ static esp_err_t mpu9250_gyro_calc_offset(mpu9250_handle_t mpu9250_handle) {
 	return ESP_OK;
 }
 static esp_err_t mpu9250_gyro_load_statistics(mpu9250_handle_t mpu9250_handle) {
-	mpu9250_handle->gyro.offset.array[X_POS]=352;
+	mpu9250_handle->gyro.offset.array[X_POS]=358;
 	mpu9250_handle->gyro.offset.array[Y_POS]=-35;
-	mpu9250_handle->gyro.offset.array[Z_POS]=-13;
+	mpu9250_handle->gyro.offset.array[Z_POS]=-15;
 
-	mpu9250_handle->gyro.var[INV_FSR_250DPS].array[X_POS]=197;
-	mpu9250_handle->gyro.var[INV_FSR_250DPS].array[Y_POS]=209;
-	mpu9250_handle->gyro.var[INV_FSR_250DPS].array[Z_POS]=247;
+	mpu9250_handle->gyro.var[INV_FSR_250DPS].array[X_POS]=196;
+	mpu9250_handle->gyro.var[INV_FSR_250DPS].array[Y_POS]=215;
+	mpu9250_handle->gyro.var[INV_FSR_250DPS].array[Z_POS]=305;
 	mpu9250_handle->gyro.sqm[INV_FSR_250DPS].array[X_POS]=14;
 	mpu9250_handle->gyro.sqm[INV_FSR_250DPS].array[Y_POS]=14;
-	mpu9250_handle->gyro.sqm[INV_FSR_250DPS].array[Z_POS]=15;
+	mpu9250_handle->gyro.sqm[INV_FSR_250DPS].array[Z_POS]=17;
 
-	mpu9250_handle->gyro.var[INV_FSR_500DPS].array[X_POS]=50;
-	mpu9250_handle->gyro.var[INV_FSR_500DPS].array[Y_POS]=50;
-	mpu9250_handle->gyro.var[INV_FSR_500DPS].array[Z_POS]=59;
+	mpu9250_handle->gyro.var[INV_FSR_500DPS].array[X_POS]=51;
+	mpu9250_handle->gyro.var[INV_FSR_500DPS].array[Y_POS]=48;
+	mpu9250_handle->gyro.var[INV_FSR_500DPS].array[Z_POS]=68;
 	mpu9250_handle->gyro.sqm[INV_FSR_500DPS].array[X_POS]=7;
-	mpu9250_handle->gyro.sqm[INV_FSR_500DPS].array[Y_POS]=7;
-	mpu9250_handle->gyro.sqm[INV_FSR_500DPS].array[Z_POS]=7;
+	mpu9250_handle->gyro.sqm[INV_FSR_500DPS].array[Y_POS]=6;
+	mpu9250_handle->gyro.sqm[INV_FSR_500DPS].array[Z_POS]=8;
 
 	mpu9250_handle->gyro.var[INV_FSR_1000DPS].array[X_POS]=12;
-	mpu9250_handle->gyro.var[INV_FSR_1000DPS].array[Y_POS]=12;
-	mpu9250_handle->gyro.var[INV_FSR_1000DPS].array[Z_POS]=13;
+	mpu9250_handle->gyro.var[INV_FSR_1000DPS].array[Y_POS]=11;
+	mpu9250_handle->gyro.var[INV_FSR_1000DPS].array[Z_POS]=15;
 	mpu9250_handle->gyro.sqm[INV_FSR_1000DPS].array[X_POS]=3;
 	mpu9250_handle->gyro.sqm[INV_FSR_1000DPS].array[Y_POS]=3;
 	mpu9250_handle->gyro.sqm[INV_FSR_1000DPS].array[Z_POS]=3;
 
 	mpu9250_handle->gyro.var[INV_FSR_2000DPS].array[X_POS]=3;
 	mpu9250_handle->gyro.var[INV_FSR_2000DPS].array[Y_POS]=2;
-	mpu9250_handle->gyro.var[INV_FSR_2000DPS].array[Z_POS]=3;
+	mpu9250_handle->gyro.var[INV_FSR_2000DPS].array[Z_POS]=2;
 	mpu9250_handle->gyro.sqm[INV_FSR_2000DPS].array[X_POS]=1;
 	mpu9250_handle->gyro.sqm[INV_FSR_2000DPS].array[Y_POS]=1;
 	mpu9250_handle->gyro.sqm[INV_FSR_2000DPS].array[Z_POS]=1;
-
-	mpu9250_handle->gyro.kalman[X_POS].P=16.45646;
-	mpu9250_handle->gyro.kalman[X_POS].K=0.08354;
-	mpu9250_handle->gyro.kalman[Y_POS].P=16.97180;
-	mpu9250_handle->gyro.kalman[Y_POS].K=0.08120;
-	mpu9250_handle->gyro.kalman[Z_POS].P=18.51298;
-	mpu9250_handle->gyro.kalman[Z_POS].K=0.07495;
+//
+//	mpu9250_handle->gyro.kalman[X_POS].P=16.45646;
+//	mpu9250_handle->gyro.kalman[X_POS].K=0.08354;
+//	mpu9250_handle->gyro.kalman[Y_POS].P=16.97180;
+//	mpu9250_handle->gyro.kalman[Y_POS].K=0.08120;
+//	mpu9250_handle->gyro.kalman[Z_POS].P=18.51298;
+//	mpu9250_handle->gyro.kalman[Z_POS].K=0.07495;
 
 
 	return ESP_OK;
@@ -346,7 +346,9 @@ esp_err_t mpu9250_gyro_init(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_gyro_load_statistics(mpu9250_handle); // set offset, var, sqm, P, K
 	mpu9250_gyro_save_offset(mpu9250_handle);
 	mpu9250_gyro_init_kalman_filter(mpu9250_handle); // this reset P,K
-	mpu9250_gyro_load_statistics(mpu9250_handle); // set P,K
+	mpu9250_handle->gyro.roll = 0;
+	mpu9250_handle->gyro.pitch = 0;
+	mpu9250_handle->gyro.yaw = 0;
 	return ESP_OK;
 }
 
@@ -397,30 +399,16 @@ esp_err_t mpu9250_gyro_filter_data(mpu9250_handle_t mpu9250_handle) {
 	}
 	return ESP_OK;
 }
+esp_err_t mpu9250_gyro_calc_rpy(mpu9250_handle_t mpu9250_handle) {
+	// angolo di rotazione: w(i)=domega(i)*dt espressa in rad
+	double w[3] = {0.0f,0.0f,0.0f};
+	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+		w[i] = (double)(mpu9250_handle->gyro.kalman[i].X)/(double)mpu9250_handle->gyro.lsb/(double)1000.0f/(double)360.0f*(double)6.283185307f;
+	}
 
-/*
-MPU9250: GyroFSR 500dps
-Discarding 10000 Samples ...
-Calculating Gyro Bias ...
-Calculating Gyro Var with 60000 samples (wait for 60 seconds)...
-Gyro_var: [51][56][53]
-Gyro_sqm: [7][7][7]
-Gyro SQM: [7][7][7]
-MPU9250: GyroFSR 1000dps
-Discarding 10000 Samples ...
-Calculating Gyro Bias ...
-Calculating Gyro Var with 60000 samples (wait for 60 seconds)...
-Gyro_var: [13][13][12]
-Gyro_sqm: [3][3][3]
-Gyro SQM: [3][3][3]
-MPU9250: GyroFSR 2000dps
-Discarding 10000 Samples ...
-Calculating Gyro Bias ...
-Calculating Gyro Var with 60000 samples (wait for 60 seconds)...
-Gyro_var: [3][2][2]
-Gyro_sqm: [1][1][1]
-Gyro SQM: [1][1][1]
-K[0.08354][0.08120][0.07495]
-P[16.45646][16.97180][18.51298]
+	mpu9250_handle->gyro.roll += w[X_POS];
+	mpu9250_handle->gyro.pitch += w[Y_POS];
+	mpu9250_handle->gyro.yaw += w[Z_POS];
 
- */
+	return ESP_OK;
+}

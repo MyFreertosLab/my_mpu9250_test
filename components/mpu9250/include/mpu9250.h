@@ -396,6 +396,9 @@ typedef struct mpu9250_accel_s {
 	uint8_t fsr;
     uint16_t lsb;
 	mpu9250_cb_t cb[3];
+	double roll;
+	double pitch;
+	double yaw;
 } mpu9250_accel_t;
 
 /*********************************
@@ -409,6 +412,10 @@ typedef struct mpu9250_gyro_s {
 	uint8_t fsr;
     float lsb;
 	mpu9250_cb_t cb[3];
+	double roll;
+	double pitch;
+	double yaw;
+
 } mpu9250_gyro_t;
 
 typedef uint8_t mpu9250_int_status_t;
@@ -433,6 +440,9 @@ typedef struct mpu9250_init_s {
 
     mpu9250_accel_t accel;
     mpu9250_gyro_t gyro;
+
+	double attitude[3];
+
 } mpu9250_init_t;
 
 typedef mpu9250_init_t* mpu9250_handle_t;
