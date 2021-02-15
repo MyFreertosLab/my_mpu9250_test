@@ -312,40 +312,37 @@ static esp_err_t mpu9250_acc_load_statistics(mpu9250_handle_t mpu9250_handle) {
 
 	return ESP_OK;
 }
-/*
- Acc offsets: [6995][-5411][9684]
-Acc means: [0][0][2047]
-MPU9250: AccFSR 16g
-Discarding 10000 Samples ...
-Calculating Acc Bias ...
-Calculating Acc Var with 60000 samples (wait for 60 seconds)...
-Acc_var: [10][10][24]
-Acc_sqm: [3][3][4]
-Acc SQM: [3][3][4]
-MPU9250: AccFSR 8g
-Discarding 10000 Samples ...
-Calculating Acc Bias ...
-Calculating Acc Var with 60000 samples (wait for 60 seconds)...
-Acc_var: [46][49][100]
-Acc_sqm: [6][7][10]
-Acc SQM: [6][7][10]
-MPU9250: AccFSR 4g
-Discarding 10000 Samples ...
-Calculating Acc Bias ...
-Calculating Acc Var with 60000 samples (wait for 60 seconds)...
-Acc_var: [290][333][400]
-Acc_sqm: [17][18][20]
-Acc SQM: [17][18][20]
-MPU9250: AccFSR 2g
-Discarding 10000 Samples ...
-Calculating Acc Bias ...
-Calculating Acc Var with 60000 samples (wait for 60 seconds)...
-Acc_var: [1822][1938][1682]
-Acc_sqm: [42][44][41]
-Acc SQM: [42][44][41]
-MPU9250: AccFSR 16g
 
- */
+static esp_err_t mpu9250_acc_calc_rpy(mpu9250_handle_t mpu9250_handle) {
+	int64_t modq = mpu9250_handle->accel.kalman[X_POS].X*mpu9250_handle->accel.kalman[X_POS].X+
+			    mpu9250_handle->accel.kalman[Y_POS].X*mpu9250_handle->accel.kalman[Y_POS].X+
+				mpu9250_handle->accel.kalman[Z_POS].X*mpu9250_handle->accel.kalman[Z_POS].X;
+	// range of values: [-pi/2,+pi/2] rad
+	mpu9250_handle->accel.roll = PI_HALF - acos((double)mpu9250_handle->accel.kalman[Y_POS].X/sqrt((double)modq));
+	mpu9250_handle->accel.pitch = - PI_HALF + acos((double)mpu9250_handle->accel.kalman[X_POS].X/sqrt((double)modq));
+	mpu9250_handle->accel.yaw = acos((double)mpu9250_handle->accel.kalman[Z_POS].X/sqrt((double)modq));
+	return ESP_OK;
+}
+
+static esp_err_t mpu9250_acc_filter_data(mpu9250_handle_t mpu9250_handle) {
+	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+		if(mpu9250_handle->accel.kalman[i].P > 0.01) {
+			/*
+			 *     X(k)=X(k-1)
+			 *     P(k)=P(k-1)+Q
+			 *     K(k)=P(k)/(P(k)+R)
+			 *     X(k)=X(k)+K(k)*(Sample(k)-X(k))
+			 *     P(k)=(1-K(k))*P(k)
+			 */
+			mpu9250_cb_means(&mpu9250_handle->accel.cb[i], &mpu9250_handle->accel.kalman[i].sample);
+			mpu9250_handle->accel.kalman[i].P = mpu9250_handle->accel.kalman[i].P+mpu9250_handle->accel.kalman[i].Q;
+			mpu9250_handle->accel.kalman[i].K = mpu9250_handle->accel.kalman[i].P/(mpu9250_handle->accel.kalman[i].P+mpu9250_handle->accel.kalman[i].R);
+			mpu9250_handle->accel.kalman[i].X = mpu9250_handle->accel.kalman[i].X + mpu9250_handle->accel.kalman[i].K*(mpu9250_handle->accel.kalman[i].sample - mpu9250_handle->accel.kalman[i].X);
+			mpu9250_handle->accel.kalman[i].P = (1-mpu9250_handle->accel.kalman[i].K)*mpu9250_handle->accel.kalman[i].P;
+		}
+	}
+	return ESP_OK;
+}
 
 /************************************************************************
  ****************** A P I  I M P L E M E N T A T I O N ******************
@@ -397,32 +394,8 @@ esp_err_t mpu9250_acc_calibrate(mpu9250_handle_t mpu9250_handle) {
 	return ESP_OK;
 }
 
-esp_err_t mpu9250_acc_calc_rpy(mpu9250_handle_t mpu9250_handle) {
-	int64_t modq = mpu9250_handle->accel.kalman[X_POS].X*mpu9250_handle->accel.kalman[X_POS].X+
-			    mpu9250_handle->accel.kalman[Y_POS].X*mpu9250_handle->accel.kalman[Y_POS].X+
-				mpu9250_handle->accel.kalman[Z_POS].X*mpu9250_handle->accel.kalman[Z_POS].X;
-	mpu9250_handle->accel.roll = 3.141592654f/2.0f - acos((double)mpu9250_handle->accel.kalman[Y_POS].X/sqrt((double)modq));
-	mpu9250_handle->accel.pitch = - 3.141592654f/2.0f + acos((double)mpu9250_handle->accel.kalman[X_POS].X/sqrt((double)modq));
-	mpu9250_handle->accel.yaw = acos((double)mpu9250_handle->accel.kalman[Z_POS].X/sqrt((double)modq));
+esp_err_t mpu9250_acc_update_state(mpu9250_handle_t mpu9250_handle) {
+	ESP_ERROR_CHECK(mpu9250_acc_filter_data(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_acc_calc_rpy(mpu9250_handle));
 	return ESP_OK;
 }
-esp_err_t mpu9250_acc_filter_data(mpu9250_handle_t mpu9250_handle) {
-	for(uint8_t i = X_POS; i <= Z_POS; i++) {
-		if(mpu9250_handle->accel.kalman[i].P > 0.01) {
-			/*
-			 *     X(k)=X(k-1)
-			 *     P(k)=P(k-1)+Q
-			 *     K(k)=P(k)/(P(k)+R)
-			 *     X(k)=X(k)+K(k)*(Sample(k)-X(k))
-			 *     P(k)=(1-K(k))*P(k)
-			 */
-			mpu9250_cb_means(&mpu9250_handle->accel.cb[i], &mpu9250_handle->accel.kalman[i].sample);
-			mpu9250_handle->accel.kalman[i].P = mpu9250_handle->accel.kalman[i].P+mpu9250_handle->accel.kalman[i].Q;
-			mpu9250_handle->accel.kalman[i].K = mpu9250_handle->accel.kalman[i].P/(mpu9250_handle->accel.kalman[i].P+mpu9250_handle->accel.kalman[i].R);
-			mpu9250_handle->accel.kalman[i].X = mpu9250_handle->accel.kalman[i].X + mpu9250_handle->accel.kalman[i].K*(mpu9250_handle->accel.kalman[i].sample - mpu9250_handle->accel.kalman[i].X);
-			mpu9250_handle->accel.kalman[i].P = (1-mpu9250_handle->accel.kalman[i].K)*mpu9250_handle->accel.kalman[i].P;
-		}
-	}
-	return ESP_OK;
-}
-

@@ -327,14 +327,33 @@ static esp_err_t mpu9250_gyro_load_statistics(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->gyro.sqm[INV_FSR_2000DPS].array[X_POS]=1;
 	mpu9250_handle->gyro.sqm[INV_FSR_2000DPS].array[Y_POS]=1;
 	mpu9250_handle->gyro.sqm[INV_FSR_2000DPS].array[Z_POS]=1;
-//
-//	mpu9250_handle->gyro.kalman[X_POS].P=16.45646;
-//	mpu9250_handle->gyro.kalman[X_POS].K=0.08354;
-//	mpu9250_handle->gyro.kalman[Y_POS].P=16.97180;
-//	mpu9250_handle->gyro.kalman[Y_POS].K=0.08120;
-//	mpu9250_handle->gyro.kalman[Z_POS].P=18.51298;
-//	mpu9250_handle->gyro.kalman[Z_POS].K=0.07495;
 
+	return ESP_OK;
+}
+
+static esp_err_t mpu9250_gyro_filter_data(mpu9250_handle_t mpu9250_handle) {
+	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+		if(mpu9250_handle->gyro.kalman[i].P > 0.01) {
+			mpu9250_cb_means(&mpu9250_handle->gyro.cb[i], &mpu9250_handle->gyro.kalman[i].sample);
+			mpu9250_handle->gyro.kalman[i].P = mpu9250_handle->gyro.kalman[i].P+mpu9250_handle->gyro.kalman[i].Q;
+			mpu9250_handle->gyro.kalman[i].K = mpu9250_handle->gyro.kalman[i].P/(mpu9250_handle->gyro.kalman[i].P+mpu9250_handle->gyro.kalman[i].R);
+			mpu9250_handle->gyro.kalman[i].X = mpu9250_handle->gyro.kalman[i].X + mpu9250_handle->gyro.kalman[i].K*(mpu9250_handle->gyro.kalman[i].sample - mpu9250_handle->gyro.kalman[i].X);
+			mpu9250_handle->gyro.kalman[i].P=(1-mpu9250_handle->gyro.kalman[i].K)*mpu9250_handle->gyro.kalman[i].P;
+		}
+	}
+	return ESP_OK;
+}
+
+static esp_err_t mpu9250_gyro_calc_rpy(mpu9250_handle_t mpu9250_handle) {
+	// angolo di rotazione: w(i)=domega(i)*dt espresso in rad
+	double w[3] = {0.0f,0.0f,0.0f};
+	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+		w[i] = (double)(mpu9250_handle->gyro.kalman[i].X)/(double)mpu9250_handle->gyro.lsb/(double)1000.0f/(double)360.0f*(double)PI_2;
+	}
+
+	mpu9250_handle->gyro.roll += w[X_POS];
+	mpu9250_handle->gyro.pitch += w[Y_POS];
+	mpu9250_handle->gyro.yaw += w[Z_POS];
 
 	return ESP_OK;
 }
@@ -387,28 +406,9 @@ esp_err_t mpu9250_gyro_calibrate(mpu9250_handle_t mpu9250_handle) {
 	return ESP_OK;
 }
 
-esp_err_t mpu9250_gyro_filter_data(mpu9250_handle_t mpu9250_handle) {
-	for(uint8_t i = X_POS; i <= Z_POS; i++) {
-		if(mpu9250_handle->gyro.kalman[i].P > 0.01) {
-			mpu9250_cb_means(&mpu9250_handle->gyro.cb[i], &mpu9250_handle->gyro.kalman[i].sample);
-			mpu9250_handle->gyro.kalman[i].P = mpu9250_handle->gyro.kalman[i].P+mpu9250_handle->gyro.kalman[i].Q;
-			mpu9250_handle->gyro.kalman[i].K = mpu9250_handle->gyro.kalman[i].P/(mpu9250_handle->gyro.kalman[i].P+mpu9250_handle->gyro.kalman[i].R);
-			mpu9250_handle->gyro.kalman[i].X = mpu9250_handle->gyro.kalman[i].X + mpu9250_handle->gyro.kalman[i].K*(mpu9250_handle->gyro.kalman[i].sample - mpu9250_handle->gyro.kalman[i].X);
-			mpu9250_handle->gyro.kalman[i].P=(1-mpu9250_handle->gyro.kalman[i].K)*mpu9250_handle->gyro.kalman[i].P;
-		}
-	}
+esp_err_t mpu9250_gyro_update_state(mpu9250_handle_t mpu9250_handle) {
+	ESP_ERROR_CHECK(mpu9250_gyro_filter_data(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_gyro_calc_rpy(mpu9250_handle));
 	return ESP_OK;
 }
-esp_err_t mpu9250_gyro_calc_rpy(mpu9250_handle_t mpu9250_handle) {
-	// angolo di rotazione: w(i)=domega(i)*dt espressa in rad
-	double w[3] = {0.0f,0.0f,0.0f};
-	for(uint8_t i = X_POS; i <= Z_POS; i++) {
-		w[i] = (double)(mpu9250_handle->gyro.kalman[i].X)/(double)mpu9250_handle->gyro.lsb/(double)1000.0f/(double)360.0f*(double)6.283185307f;
-	}
 
-	mpu9250_handle->gyro.roll += w[X_POS];
-	mpu9250_handle->gyro.pitch += w[Y_POS];
-	mpu9250_handle->gyro.yaw += w[Z_POS];
-
-	return ESP_OK;
-}
