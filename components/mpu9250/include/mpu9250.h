@@ -294,6 +294,16 @@ typedef union {
      int16_t z;
    } xyz;
 } mpu9250_int_3d_t;
+
+typedef union {
+   int32_t array[3];
+   struct {
+     int32_t x;
+     int32_t y;
+     int32_t z;
+   } xyz;
+} mpu9250_int32_3d_t;
+
 typedef union {
    uint16_t array[3];
    struct {
@@ -302,6 +312,15 @@ typedef union {
      uint16_t z;
    } xyz;
 } mpu9250_uint_3d_t;
+
+typedef union {
+   double array[3];
+   struct {
+     double x;
+     double y;
+     double z;
+   } xyz;
+} mpu9250_double_3d_t;
 
 /* Se necessario usare
  * float fixed point
@@ -346,6 +365,10 @@ typedef struct {
 typedef mpu9250_int_3d_t mpu9250_offset_t;
 typedef mpu9250_offset_t* mpu9250_offset_buff_t;
 
+/* Media */
+typedef mpu9250_int_3d_t mpu9250_means_t;
+typedef mpu9250_means_t* mpu9250_means_buff_t;
+
 /* Varianza */
 typedef mpu9250_uint_3d_t mpu9250_var_t;
 typedef mpu9250_var_t* mpu9250_var_buff_t;
@@ -353,6 +376,17 @@ typedef mpu9250_var_t* mpu9250_var_buff_t;
 /* Scarto quadratico medio */
 typedef mpu9250_int_3d_t mpu9250_sqm_t;
 typedef mpu9250_sqm_t* mpu9250_sqm_buff_t;
+
+/* RPY */
+typedef mpu9250_double_3d_t mpu9250_rpy_t;
+
+typedef struct {
+    mpu9250_offset_t offset;
+    mpu9250_means_t means[4];
+    mpu9250_var_t var[4];
+    mpu9250_sqm_t sqm[4];
+    mpu9250_kalman_t kalman[3];
+} mpu9250_cal_data_t;
 
 /* Circular Buffer */
 #define CIRCULAR_BUFFER_SIZE 5
@@ -393,33 +427,22 @@ typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
 ********* ACCELEROMETER **********
 *********************************/
 typedef struct mpu9250_accel_s {
-    mpu9250_offset_t offset;
-    mpu9250_var_t var[4];
-    mpu9250_sqm_t sqm[4];
-    mpu9250_kalman_t kalman[3];
+    mpu9250_cal_data_t cal; // calibration data
 	uint8_t fsr;
     uint16_t lsb;
-	mpu9250_cb_t cb[3];
-	double roll;
-	double pitch;
-	double yaw;
+	mpu9250_cb_t cb[3]; // circular buffer
+	mpu9250_rpy_t rpy;
 } mpu9250_accel_t;
 
 /*********************************
 *********** GYROSCOPE ************
 *********************************/
 typedef struct mpu9250_gyro_s {
-    mpu9250_offset_t offset;
-    mpu9250_var_t var[4];
-    mpu9250_sqm_t sqm[4];
-    mpu9250_kalman_t kalman[3];
+    mpu9250_cal_data_t cal; // calibration data
 	uint8_t fsr;
     float lsb;
-	mpu9250_cb_t cb[3];
-	double roll;
-	double pitch;
-	double yaw;
-
+	mpu9250_cb_t cb[3]; // circular buffer
+	mpu9250_rpy_t rpy;
 } mpu9250_gyro_t;
 
 typedef uint8_t mpu9250_int_status_t;

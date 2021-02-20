@@ -166,12 +166,12 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 	return ret;
 }
 esp_err_t mpu9250_calc_gravity(mpu9250_handle_t mpu9250_handle) {
-	double cx=cos(mpu9250_handle->gyro.roll);
-	double cy=cos(mpu9250_handle->gyro.pitch);
-	double cz=cos(mpu9250_handle->gyro.yaw);
-	double sx=sin(mpu9250_handle->gyro.roll);
-	double sy=sin(mpu9250_handle->gyro.pitch);
-	double sz=sin(mpu9250_handle->gyro.yaw);
+	double cx=cos(mpu9250_handle->gyro.rpy.xyz.x);
+	double cy=cos(mpu9250_handle->gyro.rpy.xyz.y);
+	double cz=cos(mpu9250_handle->gyro.rpy.xyz.z);
+	double sx=sin(mpu9250_handle->gyro.rpy.xyz.x);
+	double sy=sin(mpu9250_handle->gyro.rpy.xyz.y);
+	double sz=sin(mpu9250_handle->gyro.rpy.xyz.z);
 	mpu9250_handle->attitude[X_POS] = (cz*sy*cx+sz*sx);
 	mpu9250_handle->attitude[Y_POS] = (sz*sy*cx-cz*sx);
 	mpu9250_handle->attitude[Z_POS] = (cy*cx);
@@ -181,8 +181,8 @@ esp_err_t mpu9250_calc_gravity(mpu9250_handle_t mpu9250_handle) {
 esp_err_t mpu9250_calc_rpy(mpu9250_handle_t mpu9250_handle) {
 
 	// roll pitch fusion (accel + gyro)
-	mpu9250_handle->gyro.roll += 0.12*(mpu9250_handle->accel.roll - mpu9250_handle->gyro.roll);
-	mpu9250_handle->gyro.pitch += 0.12*(mpu9250_handle->accel.pitch - mpu9250_handle->gyro.pitch);
+	mpu9250_handle->gyro.rpy.xyz.x += 0.12*(mpu9250_handle->accel.rpy.xyz.x - mpu9250_handle->gyro.rpy.xyz.x);
+	mpu9250_handle->gyro.rpy.xyz.y += 0.12*(mpu9250_handle->accel.rpy.xyz.y - mpu9250_handle->gyro.rpy.xyz.y);
 
 	return ESP_OK;
 }

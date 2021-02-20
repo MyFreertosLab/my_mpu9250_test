@@ -74,13 +74,13 @@ void my_mpu9250_acc_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 				int16_t mg[3] = {0,0,0};
 				float angles[3] = {0.0f,0.0f,0.0f};
 				for(uint8_t i = X_POS; i <= Z_POS; i++) {
-					mg[i] = mpu9250_handle->accel.kalman[i].X*1000/mpu9250_handle->accel.lsb;
+					mg[i] = mpu9250_handle->accel.cal.kalman[i].X*1000/mpu9250_handle->accel.lsb;
 				}
 				int32_t module = mg[X_POS]*mg[X_POS]+mg[Y_POS]*mg[Y_POS]+mg[Z_POS]*mg[Z_POS];
 				for(uint8_t i = X_POS; i <= Z_POS; i++) {
 					angles[i] = acos(mg[i]/sqrt(module))/6.283185307*360.0f;
 					printf("%d: (X[%d],K[%3.8f]),(lsb[%d],xgc[%d]),(a[%3.3f])\n",
-							i, mpu9250_handle->accel.kalman[i].X, mpu9250_handle->accel.kalman[i].K, mpu9250_handle->accel.kalman[i].sample,mg[i], angles[i]);
+							i, mpu9250_handle->accel.cal.kalman[i].X, mpu9250_handle->accel.cal.kalman[i].K, mpu9250_handle->accel.cal.kalman[i].sample,mg[i], angles[i]);
 				}
 
 			}
@@ -144,8 +144,8 @@ void my_mpu9250_gyro_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 			// angolo di rotazione: w(i)=domega(i)*dt espressa in rad
 
 			if(counter%100 == 0) {
-				printf("S[%d][%d][%d] X[%d][%d][%d]\n", mpu9250_handle->gyro.kalman[X_POS].sample, mpu9250_handle->gyro.kalman[Y_POS].sample, mpu9250_handle->gyro.kalman[Z_POS].sample, mpu9250_handle->gyro.kalman[X_POS].X , mpu9250_handle->gyro.kalman[Y_POS].X, mpu9250_handle->gyro.kalman[Z_POS].X);
-				printf("A[%2.5f][%2.5f][%2.5f] RPY[%2.5f][%2.5f][%2.5f]\n", mpu9250_handle->attitude[X_POS], mpu9250_handle->attitude[Y_POS], mpu9250_handle->attitude[Z_POS], mpu9250_handle->gyro.roll*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.pitch*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.yaw*(double)360.0f/(double)6.283185307f);
+				printf("S[%d][%d][%d] X[%d][%d][%d]\n", mpu9250_handle->gyro.cal.kalman[X_POS].sample, mpu9250_handle->gyro.cal.kalman[Y_POS].sample, mpu9250_handle->gyro.cal.kalman[Z_POS].sample, mpu9250_handle->gyro.cal.kalman[X_POS].X , mpu9250_handle->gyro.cal.kalman[Y_POS].X, mpu9250_handle->gyro.cal.kalman[Z_POS].X);
+				printf("A[%2.5f][%2.5f][%2.5f] RPY[%2.5f][%2.5f][%2.5f]\n", mpu9250_handle->attitude[X_POS], mpu9250_handle->attitude[Y_POS], mpu9250_handle->attitude[Z_POS], mpu9250_handle->gyro.rpy.xyz.x*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.rpy.xyz.y*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.rpy.xyz.z*(double)360.0f/(double)6.283185307f);
 			}
 	    } else {
 	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
@@ -170,11 +170,11 @@ void my_mpu9250_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 			// angolo di rotazione: w(i)=domega(i)*dt espressa in rad
 
 			if(counter%100 == 0) {
-				printf("Gyro: S[%d][%d][%d] X[%d][%d][%d]\n", mpu9250_handle->gyro.kalman[X_POS].sample, mpu9250_handle->gyro.kalman[Y_POS].sample, mpu9250_handle->gyro.kalman[Z_POS].sample, mpu9250_handle->gyro.kalman[X_POS].X , mpu9250_handle->gyro.kalman[Y_POS].X, mpu9250_handle->gyro.kalman[Z_POS].X);
-				printf("A[%2.5f][%2.5f][%2.5f] RPY[%2.5f][%2.5f][%2.5f]\n", mpu9250_handle->attitude[X_POS], mpu9250_handle->attitude[Y_POS], mpu9250_handle->attitude[Z_POS], mpu9250_handle->gyro.roll*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.pitch*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.yaw*(double)360.0f/(double)6.283185307f);
-				printf("Accel: S[%d][%d][%d] X[%d][%d][%d]\n", mpu9250_handle->accel.kalman[X_POS].sample, mpu9250_handle->accel.kalman[Y_POS].sample, mpu9250_handle->accel.kalman[Z_POS].sample, mpu9250_handle->accel.kalman[X_POS].X , mpu9250_handle->accel.kalman[Y_POS].X, mpu9250_handle->accel.kalman[Z_POS].X);
-				printf("A[%2.5f][%2.5f][%2.5f] RPY[%2.5f][%2.5f][%2.5f]\n", mpu9250_handle->attitude[X_POS], mpu9250_handle->attitude[Y_POS], mpu9250_handle->attitude[Z_POS], mpu9250_handle->accel.roll*(double)360.0f/(double)6.283185307f, mpu9250_handle->accel.pitch*(double)360.0f/(double)6.283185307f, mpu9250_handle->accel.yaw*(double)360.0f/(double)6.283185307f);
-				printf("RPY[%2.5f][%2.5f] K[%1.5f][%1.5f][%1.5f]\n", mpu9250_handle->gyro.roll*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.pitch*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.kalman[X_POS].K, mpu9250_handle->gyro.kalman[Y_POS].K, mpu9250_handle->gyro.kalman[Z_POS].K );
+				printf("Gyro: S[%d][%d][%d] X[%d][%d][%d]\n", mpu9250_handle->gyro.cal.kalman[X_POS].sample, mpu9250_handle->gyro.cal.kalman[Y_POS].sample, mpu9250_handle->gyro.cal.kalman[Z_POS].sample, mpu9250_handle->gyro.cal.kalman[X_POS].X , mpu9250_handle->gyro.cal.kalman[Y_POS].X, mpu9250_handle->gyro.cal.kalman[Z_POS].X);
+				printf("A[%2.5f][%2.5f][%2.5f] RPY[%2.5f][%2.5f][%2.5f]\n", mpu9250_handle->attitude[X_POS], mpu9250_handle->attitude[Y_POS], mpu9250_handle->attitude[Z_POS], mpu9250_handle->gyro.rpy.xyz.x*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.rpy.xyz.y*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.rpy.xyz.z*(double)360.0f/(double)6.283185307f);
+				printf("Accel: S[%d][%d][%d] X[%d][%d][%d]\n", mpu9250_handle->accel.cal.kalman[X_POS].sample, mpu9250_handle->accel.cal.kalman[Y_POS].sample, mpu9250_handle->accel.cal.kalman[Z_POS].sample, mpu9250_handle->accel.cal.kalman[X_POS].X , mpu9250_handle->accel.cal.kalman[Y_POS].X, mpu9250_handle->accel.cal.kalman[Z_POS].X);
+				printf("A[%2.5f][%2.5f][%2.5f] RPY[%2.5f][%2.5f][%2.5f]\n", mpu9250_handle->attitude[X_POS], mpu9250_handle->attitude[Y_POS], mpu9250_handle->attitude[Z_POS], mpu9250_handle->accel.rpy.xyz.x*(double)360.0f/(double)6.283185307f, mpu9250_handle->accel.rpy.xyz.y*(double)360.0f/(double)6.283185307f, mpu9250_handle->accel.rpy.xyz.z*(double)360.0f/(double)6.283185307f);
+				printf("RPY[%2.5f][%2.5f] K[%1.5f][%1.5f][%1.5f]\n", mpu9250_handle->gyro.rpy.xyz.x*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.rpy.xyz.y*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.cal.kalman[X_POS].K, mpu9250_handle->gyro.cal.kalman[Y_POS].K, mpu9250_handle->gyro.cal.kalman[Z_POS].K );
 			}
 	    } else {
 	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
