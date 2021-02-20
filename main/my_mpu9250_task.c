@@ -16,81 +16,9 @@
 #include <my_mpu9250_task.h>
 #include <mpu9250_accel.h>
 #include <mpu9250_gyro.h>
+#include <mpu9250_calibrator.h>
 
 void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
-}
-void my_mpu9250_acc_static_calibration(mpu9250_handle_t mpu9250_handle) {
-	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
-
-	// calibration offset and biases
-	ESP_ERROR_CHECK(mpu9250_acc_calibrate(mpu9250_handle));
-
-	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
-		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
-			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
-		}
-	}
-
-}
-
-
-/*
- * we assume this cycle:
- * Calc Predition:
- *   X(k)=A*X(k-1)+B*u(k-1)
- *   P(k)=A*P(k-1)*A'+Q
- * Calc Update:
- *   K(k)=P(k)H'(H*P(k)*H'+R)^(-1)
- *   X(k)=X(k)+K(k)(Sample(k)-H*X(k))
- *   P(k)=(I-K(k)*H)*P(k)
- * with:
- *   A=H=1,
- *   B=0,
- *   Q=1.5
- *   R=variance of state,
- * then:
- *   initialization:
- *     X(0)=fixed expected response
- *     P(0)=1
- *     Q=1.5
- *   cycle for each sample
- *     X(k)=X(k-1)
- *     P(k)=P(k-1) + Q
- *     K(k)=P(k)/(P(k)+R)
- *     X(k)=X(k)-K(k)*(Sample(k)-X(k))
- *     P(k)=(1-K(k))*P(k)
- */
-void my_mpu9250_acc_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
-	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
-
-	// read cycle
-	int32_t counter = 0;
-	while (true) {
-		counter++;
-		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
-			ESP_ERROR_CHECK(mpu9250_load_data(mpu9250_handle));
-
-			if(counter%100 == 0) {
-				int16_t mg[3] = {0,0,0};
-				float angles[3] = {0.0f,0.0f,0.0f};
-				for(uint8_t i = X_POS; i <= Z_POS; i++) {
-					mg[i] = mpu9250_handle->accel.cal.kalman[i].X*1000/mpu9250_handle->accel.lsb;
-				}
-				int32_t module = mg[X_POS]*mg[X_POS]+mg[Y_POS]*mg[Y_POS]+mg[Z_POS]*mg[Z_POS];
-				for(uint8_t i = X_POS; i <= Z_POS; i++) {
-					angles[i] = acos(mg[i]/sqrt(module))/6.283185307*360.0f;
-					printf("%d: (X[%d],K[%3.8f]),(lsb[%d],xgc[%d]),(a[%3.3f])\n",
-							i, mpu9250_handle->accel.cal.kalman[i].X, mpu9250_handle->accel.cal.kalman[i].K, mpu9250_handle->accel.cal.kalman[i].sample,mg[i], angles[i]);
-				}
-
-			}
-	    } else {
-	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
-			if(counter%100 == 0) {
-		    	printf("SORRY!! Interrupt LOST!\n");
-			}
-	    }
-	}
 }
 
 void my_mpu9250_temperature_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
@@ -116,43 +44,16 @@ void my_mpu9250_temperature_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 	}
 }
 
-void my_mpu9250_gyro_static_calibration(mpu9250_handle_t mpu9250_handle) {
+void my_mpu9250_static_calibration(mpu9250_cal_handle_t mpu9250_cal_handle) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 	// calibration offset and biases
-	ESP_ERROR_CHECK(mpu9250_gyro_calibrate(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_calibrate(mpu9250_cal_handle));
 
 
 	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
 		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
-			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
+			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_cal_handle->mpu9250_handle));
 		}
-	}
-}
-void my_mpu9250_gyro_calc_angles(mpu9250_handle_t mpu9250_handle) {
-
-}
-void my_mpu9250_gyro_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
-	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
-	uint32_t counter = 0;
-	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_1000DPS));
-	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
-
-	while (true) {
-		counter++;
-		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
-			ESP_ERROR_CHECK(mpu9250_load_data(mpu9250_handle));
-			// angolo di rotazione: w(i)=domega(i)*dt espressa in rad
-
-			if(counter%100 == 0) {
-				printf("S[%d][%d][%d] X[%d][%d][%d]\n", mpu9250_handle->gyro.cal.kalman[X_POS].sample, mpu9250_handle->gyro.cal.kalman[Y_POS].sample, mpu9250_handle->gyro.cal.kalman[Z_POS].sample, mpu9250_handle->gyro.cal.kalman[X_POS].X , mpu9250_handle->gyro.cal.kalman[Y_POS].X, mpu9250_handle->gyro.cal.kalman[Z_POS].X);
-				printf("A[%2.5f][%2.5f][%2.5f] RPY[%2.5f][%2.5f][%2.5f]\n", mpu9250_handle->attitude[X_POS], mpu9250_handle->attitude[Y_POS], mpu9250_handle->attitude[Z_POS], mpu9250_handle->gyro.rpy.xyz.x*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.rpy.xyz.y*(double)360.0f/(double)6.283185307f, mpu9250_handle->gyro.rpy.xyz.z*(double)360.0f/(double)6.283185307f);
-			}
-	    } else {
-	    	ESP_ERROR_CHECK(mpu9250_test_connection(mpu9250_handle));
-			if(counter%100 == 0) {
-		    	printf("SORRY!! Interrupt LOST!\n");
-			}
-	    }
 	}
 }
 
@@ -191,16 +92,15 @@ void my_mpu9250_task(void *arg) {
 	mpu9250_init_t mpu9250;
 	mpu9250_handle_t mpu9250_handle = &mpu9250;
 
+	mpu9250_cal_t calibrator;
+	calibrator.mpu9250_handle = mpu9250_handle;
+	mpu9250_cal_handle_t mpu9250_cal_handle = &calibrator;
+
 	// Init MPU9250
 	ESP_ERROR_CHECK(mpu9250_init(mpu9250_handle));
 
-//	// Gyro Calibration
-//	my_mpu9250_gyro_static_calibration(mpu9250_handle);
-//	my_mpu9250_gyro_read_data_cycle(mpu9250_handle);
-
-	// Accelerometer Calibration
-//	my_mpu9250_acc_static_calibration(mpu9250_handle);
-//	my_mpu9250_acc_read_data_cycle(mpu9250_handle);
+	// Calibration
+	my_mpu9250_static_calibration(mpu9250_cal_handle);
 
 	// load circular buffer
 	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {

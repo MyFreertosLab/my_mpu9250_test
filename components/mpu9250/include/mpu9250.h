@@ -305,6 +305,15 @@ typedef union {
 } mpu9250_int32_3d_t;
 
 typedef union {
+   int64_t array[3];
+   struct {
+     int64_t x;
+     int64_t y;
+     int64_t z;
+   } xyz;
+} mpu9250_int64_3d_t;
+
+typedef union {
    uint16_t array[3];
    struct {
      uint16_t x;
@@ -312,6 +321,24 @@ typedef union {
      uint16_t z;
    } xyz;
 } mpu9250_uint_3d_t;
+
+typedef union {
+   uint32_t array[3];
+   struct {
+     uint32_t x;
+     uint32_t y;
+     uint32_t z;
+   } xyz;
+} mpu9250_uint32_3d_t;
+
+typedef union {
+   uint64_t array[3];
+   struct {
+     uint64_t x;
+     uint64_t y;
+     uint64_t z;
+   } xyz;
+} mpu9250_uint64_3d_t;
 
 typedef union {
    double array[3];
