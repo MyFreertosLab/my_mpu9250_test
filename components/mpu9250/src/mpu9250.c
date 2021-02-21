@@ -67,8 +67,10 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	}
 
     // set Configuration Register
-	printf("MPU9250: Gyro bandwidth 184Hz\n");
-    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_CONFIG, 0x01)); // gyro bandwidth 184Hz
+//	printf("MPU9250: Gyro bandwidth 184Hz\n");
+//    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_CONFIG, 0x01)); // gyro bandwidth 184Hz
+	printf("MPU9250: Gyro bandwidth 5Hz\n");
+    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_CONFIG, 0x06)); // gyro bandwidth 5Hz
 
     // set Gyro Configuration Register
 	printf("MPU9250: Gyro +-250deg/sec\n");
@@ -78,8 +80,8 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_16G));
 
     // set Acc Conf2 Register
-	printf("MPU9250: Accel bandwidth 92Hz\n");
-    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_ACCEL_CONFIG_2, 0x02)); // bandwidth 92Hz
+	printf("MPU9250: Accel bandwidth 5Hz\n");
+    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_ACCEL_CONFIG_2, 0x06)); // bandwidth 5Hz
 
     // set PwrMgmt2 Register
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_PWR_MGMT_2, 0x00));
@@ -168,21 +170,21 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 esp_err_t mpu9250_calc_gravity(mpu9250_handle_t mpu9250_handle) {
 	double cx=cos(mpu9250_handle->gyro.rpy.xyz.x);
 	double cy=cos(mpu9250_handle->gyro.rpy.xyz.y);
-	double cz=cos(mpu9250_handle->gyro.rpy.xyz.z);
 	double sx=sin(mpu9250_handle->gyro.rpy.xyz.x);
 	double sy=sin(mpu9250_handle->gyro.rpy.xyz.y);
-	double sz=sin(mpu9250_handle->gyro.rpy.xyz.z);
-	mpu9250_handle->attitude[X_POS] = (cz*sy*cx+sz*sx);
-	mpu9250_handle->attitude[Y_POS] = (sz*sy*cx-cz*sx);
-	mpu9250_handle->attitude[Z_POS] = (cy*cx);
+	// roll,pitch,yaw from gyro are axis rotation
+	// then attitude vector rotation is inverse
+	mpu9250_handle->attitude[X_POS] = -sy;
+	mpu9250_handle->attitude[Y_POS] = cy*sx;
+	mpu9250_handle->attitude[Z_POS] = cy*cx;
 
 	return ESP_OK;
 }
 esp_err_t mpu9250_calc_rpy(mpu9250_handle_t mpu9250_handle) {
 
 	// roll pitch fusion (accel + gyro)
-	mpu9250_handle->gyro.rpy.xyz.x += 0.12*(mpu9250_handle->accel.rpy.xyz.x - mpu9250_handle->gyro.rpy.xyz.x);
-	mpu9250_handle->gyro.rpy.xyz.y += 0.12*(mpu9250_handle->accel.rpy.xyz.y - mpu9250_handle->gyro.rpy.xyz.y);
+	mpu9250_handle->gyro.rpy.xyz.x += 0.003*(mpu9250_handle->accel.rpy.xyz.x - mpu9250_handle->gyro.rpy.xyz.x);
+	mpu9250_handle->gyro.rpy.xyz.y += 0.003*(mpu9250_handle->accel.rpy.xyz.y - mpu9250_handle->gyro.rpy.xyz.y);
 
 	return ESP_OK;
 }
