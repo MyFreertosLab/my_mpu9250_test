@@ -19,4 +19,29 @@ The sampling frequency used is 1KHz.
 The sampling frequency used is 1KHz.
 
 Below are the SPI connections between ESP32 and MPU9250 and the calibration phases.
+<h1>SPI Connections</h1>
+<p align="left">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/esp32ToImu-Miso-Mosi-Sclk.jpg" width="300" title="hover text">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/esp32ToImu-Ncs-Int.jpg" width="300" title="hover text">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/imuToEsp32.jpg" width="300" title="hover text">
+</p>
 
+<h1>Calibration</h1>
+<h2>Phase 1</h2>
+<p align="left">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-start.jpg" width="300" title="Start with command: 'idf.py monitor'">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-1.jpg" width="300" title="Offset Calc Cycles">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-2.jpg" width="300" title="Convergence OK">
+</p>
+
+<h1>Calibration</h1>
+<h2>Phase 2</h2>
+<p align="left">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/biases-for-each-FSR.jpg" width="300" title="Variance and Mean Square Deviation calculation">
+</p>
+
+<h1>Test</h1>
+<p align="left">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/test-1.jpg" width="300" title="MPU9250 positioned with an exact 60 degree inclination">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/test-2.jpg" width="300" title="Misurements">
+</p>
