@@ -56,6 +56,14 @@ void my_mpu9250_static_calibration(mpu9250_cal_handle_t mpu9250_cal_handle) {
 		}
 	}
 }
+static esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs) {
+	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
+	printf("Discarding %d Samples ... \n", num_msgs);
+	for(uint16_t i = 0; i < num_msgs; i++) {
+		ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
+	}
+	return ESP_OK;
+}
 
 void my_mpu9250_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );

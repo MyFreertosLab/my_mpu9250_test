@@ -514,7 +514,5 @@ esp_err_t mpu9250_load_whoami(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_int_status(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_load_data(mpu9250_handle_t mpu9250_handle);
-esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs);
-esp_err_t mpu9250_display_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs);
 
 #endif // _MPU9250_H_

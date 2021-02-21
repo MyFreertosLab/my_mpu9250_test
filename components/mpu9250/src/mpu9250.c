@@ -204,33 +204,3 @@ esp_err_t mpu9250_load_data(mpu9250_handle_t mpu9250_handle) {
 	return ESP_OK;
 }
 
-esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs) {
-	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
-	printf("Discarding %d Samples ... \n", num_msgs);
-	for(uint16_t i = 0; i < num_msgs; i++) {
-		ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
-	}
-	return ESP_OK;
-}
-
-esp_err_t mpu9250_display_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs) {
-	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
-	for(uint16_t i = 0; i < num_msgs; i++) {
-		ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
-		ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
-		if(i%100 == 0) {
-			printf("Acc [%d][%d][%d]\n",
-					mpu9250_handle->raw_data.data_s_xyz.accel_data_x,
-					mpu9250_handle->raw_data.data_s_xyz.accel_data_y,
-					mpu9250_handle->raw_data.data_s_xyz.accel_data_z
-				  );
-			printf("Gyro [%d][%d][%d]\n",
-					mpu9250_handle->raw_data.data_s_xyz.gyro_data_x,
-					mpu9250_handle->raw_data.data_s_xyz.gyro_data_y,
-					mpu9250_handle->raw_data.data_s_xyz.gyro_data_z
-				  );
-		}
-	}
-	return ESP_OK;
-}
-

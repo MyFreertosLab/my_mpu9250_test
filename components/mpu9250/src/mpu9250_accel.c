@@ -50,7 +50,7 @@ static esp_err_t mpu9250_acc_save_fsr(mpu9250_handle_t mpu9250_handle) {
 }
 
 static esp_err_t mpu9250_acc_init_kalman_filter(mpu9250_handle_t mpu9250_handle) {
-	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+	for(uint8_t i = 0; i < 3; i++) {
 		mpu9250_handle->accel.cal.kalman[i].X = mpu9250_handle->accel.lsb;
 		mpu9250_handle->accel.cal.kalman[i].sample=0;
 		mpu9250_handle->accel.cal.kalman[i].P=1.0f;
@@ -132,7 +132,7 @@ static esp_err_t mpu9250_acc_calc_rpy(mpu9250_handle_t mpu9250_handle) {
 }
 
 static esp_err_t mpu9250_acc_filter_data(mpu9250_handle_t mpu9250_handle) {
-	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+	for(uint8_t i = 0; i < 3; i++) {
 		if(mpu9250_handle->accel.cal.kalman[i].P > 0.01) {
 			/*
 			 *     X(k)=X(k-1)

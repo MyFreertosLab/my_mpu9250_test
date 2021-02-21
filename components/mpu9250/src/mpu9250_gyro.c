@@ -52,19 +52,13 @@ static esp_err_t mpu9250_gyro_save_fsr(mpu9250_handle_t mpu9250_handle) {
 static esp_err_t mpu9250_gyro_init_kalman_filter(mpu9250_handle_t mpu9250_handle) {
 	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 
-	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+	for(uint8_t i = 0; i < 3; i++) {
 		mpu9250_handle->gyro.cal.kalman[i].X = mpu9250_handle->gyro.lsb;
 		mpu9250_handle->gyro.cal.kalman[i].sample=0;
 		mpu9250_handle->gyro.cal.kalman[i].P=1.0f;
 		mpu9250_handle->gyro.cal.kalman[i].Q=1.5;
 		mpu9250_handle->gyro.cal.kalman[i].K=0.0f;
 		mpu9250_handle->gyro.cal.kalman[i].R=mpu9250_handle->gyro.cal.var[mpu9250_handle->gyro.fsr].array[i];
-	}
-
-	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
-		if( ulTaskNotifyTake( pdTRUE,xMaxBlockTime ) == 1) {
-			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
-		}
 	}
 	return ESP_OK;
 }
@@ -142,7 +136,7 @@ static esp_err_t mpu9250_gyro_load_statistics(mpu9250_handle_t mpu9250_handle) {
 }
 
 static esp_err_t mpu9250_gyro_filter_data(mpu9250_handle_t mpu9250_handle) {
-	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+	for(uint8_t i = 0; i < 3; i++) {
 		if(mpu9250_handle->gyro.cal.kalman[i].P > 0.01) {
 			mpu9250_cb_means(&mpu9250_handle->gyro.cb[i], &mpu9250_handle->gyro.cal.kalman[i].sample);
 			mpu9250_handle->gyro.cal.kalman[i].P = mpu9250_handle->gyro.cal.kalman[i].P+mpu9250_handle->gyro.cal.kalman[i].Q;
@@ -157,7 +151,7 @@ static esp_err_t mpu9250_gyro_filter_data(mpu9250_handle_t mpu9250_handle) {
 static esp_err_t mpu9250_gyro_calc_rpy(mpu9250_handle_t mpu9250_handle) {
 	// angolo di rotazione: w(i)=domega(i)*dt espresso in rad
 	double w[3] = {0.0f,0.0f,0.0f};
-	for(uint8_t i = X_POS; i <= Z_POS; i++) {
+	for(uint8_t i = 0; i < 3; i++) {
 		w[i] = (double)(mpu9250_handle->gyro.cal.kalman[i].X)/(double)mpu9250_handle->gyro.lsb/(double)1000.0f/(double)360.0f*(double)PI_2;
 	}
 
