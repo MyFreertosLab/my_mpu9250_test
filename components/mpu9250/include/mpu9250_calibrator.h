@@ -9,8 +9,9 @@
 #define COMPONENTS_MPU9250_INCLUDE_MPU9250_CALIBRATOR_H_
 #include <mpu9250.h>
 
-#define MPU9250_CAL_ACCEL_INDEX 0
-#define MPU9250_CAL_GYRO_INDEX  1
+#define MPU9250_CAL_ACCEL_INDEX         0
+#define MPU9250_CAL_GYRO_INDEX          1
+#define MPU9250_CAL_MAX_KSAMPLE_CYCLES 10
 
 /*********************************
 ******* CALIBRATOR HANDLE ********

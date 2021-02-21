@@ -118,7 +118,7 @@ static esp_err_t mpu9250_cal_calc_bias(mpu9250_cal_handle_t mpu9250_cal_handle) 
 		memset(mpu9250_handle->gyro.cal.var[mpu9250_handle->gyro.fsr].array, 0, sizeof(mpu9250_handle->gyro.cal.var[mpu9250_handle->gyro.fsr].array));       //Zero out var
 		memset(mpu9250_handle->gyro.cal.sqm[mpu9250_handle->gyro.fsr].array, 0, sizeof(mpu9250_handle->gyro.cal.sqm[mpu9250_handle->gyro.fsr].array));       //Zero out sqm
 
-		ESP_ERROR_CHECK(mpu9250_cal_calc_var(mpu9250_cal_handle, 10));
+		ESP_ERROR_CHECK(mpu9250_cal_calc_var(mpu9250_cal_handle, MPU9250_CAL_MAX_KSAMPLE_CYCLES));
 		ESP_ERROR_CHECK(mpu9250_cal_calc_sqm(mpu9250_cal_handle));
 
 	}
@@ -135,19 +135,19 @@ static esp_err_t mpu9250_cal_calc_biases(mpu9250_cal_handle_t mpu9250_cal_handle
 	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_8G));
 	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_1000DPS));
 	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
-	ESP_ERROR_CHECK(mpu9250_cal_calc_means(mpu9250_cal_handle, 10));
+	ESP_ERROR_CHECK(mpu9250_cal_calc_means(mpu9250_cal_handle, MPU9250_CAL_MAX_KSAMPLE_CYCLES));
 	ESP_ERROR_CHECK(mpu9250_cal_calc_bias(mpu9250_cal_handle));
 
 	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_4G));
 	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_500DPS));
 	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
-	ESP_ERROR_CHECK(mpu9250_cal_calc_means(mpu9250_cal_handle, 10));
+	ESP_ERROR_CHECK(mpu9250_cal_calc_means(mpu9250_cal_handle, MPU9250_CAL_MAX_KSAMPLE_CYCLES));
 	ESP_ERROR_CHECK(mpu9250_cal_calc_bias(mpu9250_cal_handle));
 
 	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_2G));
 	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_handle, INV_FSR_250DPS));
 	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
-	ESP_ERROR_CHECK(mpu9250_cal_calc_means(mpu9250_cal_handle, 10));
+	ESP_ERROR_CHECK(mpu9250_cal_calc_means(mpu9250_cal_handle, MPU9250_CAL_MAX_KSAMPLE_CYCLES));
 	ESP_ERROR_CHECK(mpu9250_cal_calc_bias(mpu9250_cal_handle));
 
 	return ESP_OK;
@@ -177,8 +177,7 @@ static esp_err_t mpu9250_cal_calc_offset(mpu9250_cal_handle_t mpu9250_cal_handle
 		ESP_ERROR_CHECK(mpu9250_cal_load_offset(mpu9250_cal_handle));
 
 		printf("Calculating Offsets ... \n");
-		uint16_t max_means = 20;
-		ESP_ERROR_CHECK(mpu9250_cal_calc_means(mpu9250_cal_handle, max_means));
+		ESP_ERROR_CHECK(mpu9250_cal_calc_means(mpu9250_cal_handle, MPU9250_CAL_MAX_KSAMPLE_CYCLES));
 
 		for(uint8_t i = 0; i<3; i++) {
 			ESP_ERROR_CHECK(mpu9250_cal_set_found_offset(&mpu9250_cal_handle->found[MPU9250_CAL_ACCEL_INDEX][i], 1, (i==Z_POS ? mpu9250_cal_handle->mpu9250_handle->accel.lsb : 0 ), mpu9250_cal_handle->mpu9250_handle->accel.cal.means[mpu9250_cal_handle->mpu9250_handle->accel.fsr].array[i], &mpu9250_cal_handle->mpu9250_handle->accel.cal.offset.array[i]));
