@@ -46,5 +46,6 @@ Below are the SPI connections between ESP32 and MPU9250 and the calibration phas
 </p>
 
 <h1>TODO List</h1>
+
 1) Estimation of Scale Factors 
 2) Calibration for Magnetometer
