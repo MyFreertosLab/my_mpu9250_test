@@ -13,8 +13,7 @@ Phase 1: Calculation of the offsets on all axes. This phase is iterative. Calcul
 
 Phase 2: Variance and mean square deviation calculation for each available 'Free Scale Resolution (FSR)'. The result of this step is used in the Kalman Filter to calculate the gain K.
 
-A Kalman filter is used to estimate the measurements. The gain K is calculated using the variance obtained in step 2.
-The sampling frequency used is 1KHz.
+A Kalman filter is used to estimate the measurements. The gain K is calculated using the variance obtained in Phase 2.
 
 The sampling frequency used is 1KHz.
 
@@ -45,3 +44,7 @@ Below are the SPI connections between ESP32 and MPU9250 and the calibration phas
   <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/test-1.jpg" width="300" title="MPU9250 positioned with an exact 60 degree inclination">
   <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/test-2.jpg" width="300" title="Misurements">
 </p>
+
+<h1>TODO List</h1>
+1) Estimation of Scale Factors 
+2) Calibration for Magnetometer
