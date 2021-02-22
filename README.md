@@ -7,6 +7,7 @@ It is made with espressif freertos v4.2 sdk (https://docs.espressif.com/projects
 You can build it with command <code>cmake --build build</code> or  <code>idf.py build</code>
 
 The software performs a static calibration. 
+
 To try it out, you should:
 1) place the sensor on a reference plane without vibrations
 2) connect your development board on USB port
