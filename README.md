@@ -28,9 +28,9 @@ Below are the SPI connections between ESP32 and MPU9250 and the calibration phas
 <h1>Calibration</h1>
 <h2>Phase 1</h2>
 <p align="left">
-  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-start.jpg" width="300" title="Start with command: 'idf.py monitor'">
-  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-1.jpg" width="300" title="Offset Calc Cycles">
-  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-2.jpg" width="300" title="Convergence OK">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-start.jpg" width="250" title="Start with command: 'idf.py monitor'">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-1.jpg" width="250" title="Offset Calc Cycles">
+  <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-2.jpg" width="250" title="Convergence OK">
 </p>
 
 <h1>Calibration</h1>
