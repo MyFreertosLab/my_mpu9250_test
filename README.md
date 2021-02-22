@@ -1,11 +1,21 @@
 ESP-IDF MPU-9250 Test
 =====================
 
-This is a MPU9250 Test on ESP32 connected with SPI2 interface
+This is a MPU9250 Test on ESP32 connected with SPI2 interface.
+It is made with espressif freertos v4.2 sdk (https://docs.espressif.com/projects/esp-idf/en/v4.2/esp32/get-started/index.html).
 
-The software performs a static calibration which consists of:
+You can build it with command <code>cmake --build build</code> or  <code>idf.py build</code>
+
+The software performs a static calibration. 
+To try it out, you should:
 1) place the sensor on a reference plane without vibrations
-2) start the test and wait for it to converge to the optimal calibration
+2) connect your development board on USB port
+3) flash the firmware with the command <code>idf.py flash</code>
+4) run <code>idf.py monitor</code> to see the logs
+5) wait for it to converge to the optimal calibration
+6) move the sensor to check the measurements provided
+
+
 
 Calibration is performed in two stages. Each of them applied simultaneously on gyroscope and accelerometer
 
