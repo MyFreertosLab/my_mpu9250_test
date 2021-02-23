@@ -50,7 +50,7 @@ Below are the SPI connections between ESP32 and MPU9250 and the calibration phas
   <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/biases-for-each-FSR.jpg" width="300" title="Variance and Mean Square Deviation calculation">
 </p>
 
-<h1>Test</h1>
+<h1>Test: Estimation of Measurements (Kalman Filter)</h1>
 <p align="left">
   <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/test-1.jpg" width="300" title="MPU9250 positioned with an exact 60 degree inclination">
   <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/test-2.jpg" width="300" title="Misurements">
