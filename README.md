@@ -22,7 +22,7 @@ Calibration is performed in two stages. Each of them applied simultaneously on g
 
 Phase 1: Calculation of the offsets on all axes. This phase is iterative. Calculation cycles and offsets assignment are performed until an average error equal to zero is obtained.
 
-Phase 2: Variance and mean square deviation calculation for each available 'Free Scale Resolution (FSR)'. The result of this step is used in the Kalman Filter to calculate the gain K.
+Phase 2: Variance and Mean Square Deviation calculation for each available 'Free Scale Resolution (FSR)'. The result of this step is used in the Kalman Filter to calculate the gain K.
 
 A Kalman filter is used to estimate the measurements. The gain K is calculated using the variance obtained in Phase 2.
 
@@ -37,7 +37,7 @@ Below are the SPI connections between ESP32 and MPU9250 and the calibration phas
 </p>
 
 <h1>Calibration</h1>
-<h2>Phase 1</h2>
+<h2>Phase 1: Calculation of the offsets on all axes</h2>
 <p align="left">
   <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-start.jpg" width="250" title="Start with command: 'idf.py monitor'">
   <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/convergence-1.jpg" width="250" title="Offset Calc Cycles">
@@ -45,7 +45,7 @@ Below are the SPI connections between ESP32 and MPU9250 and the calibration phas
 </p>
 
 <h1>Calibration</h1>
-<h2>Phase 2</h2>
+<h2>Phase 2: Calculation of Variance and Mean Square Deviation</h2>
 <p align="left">
   <img src="https://github.com/MyFreertosLab/my_mpu9250_test/blob/master/images/biases-for-each-FSR.jpg" width="300" title="Variance and Mean Square Deviation calculation">
 </p>
