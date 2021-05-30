@@ -505,6 +505,7 @@ typedef mpu9250_init_t* mpu9250_handle_t;
 
 /* Private Methods */
 void mpu9250_cb_means(mpu9250_cb_handle_t cb, int16_t* mean);
+void mpu9250_cb_last(mpu9250_cb_handle_t cb, int16_t* val);
 
 /* Public Methids */
 /* Set up APIs */

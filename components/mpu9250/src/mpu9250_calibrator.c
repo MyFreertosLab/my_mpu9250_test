@@ -8,6 +8,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <esp_system.h>
+#include <nvs_flash.h>
+#include <nvs.h>
 #include <mpu9250_accel.h>
 #include <mpu9250_gyro.h>
 #include <mpu9250_calibrator.h>
@@ -228,6 +231,8 @@ static esp_err_t mpu9250_cal_calc_offset(mpu9250_cal_handle_t mpu9250_cal_handle
 		ESP_ERROR_CHECK(mpu9250_cal_diaplay_status(mpu9250_cal_handle));
 
 		if(found_all == 6) {
+			printf("Final Acc offsets: [%d][%d][%d]\n", mpu9250_cal_handle->mpu9250_handle->accel.cal.offset.xyz.x, mpu9250_cal_handle->mpu9250_handle->accel.cal.offset.xyz.y,mpu9250_cal_handle->mpu9250_handle->accel.cal.offset.xyz.z);
+			printf("Final Gyro offsets: [%d][%d][%d]\n", mpu9250_cal_handle->mpu9250_handle->gyro.cal.offset.xyz.x, mpu9250_cal_handle->mpu9250_handle->gyro.cal.offset.xyz.y,mpu9250_cal_handle->mpu9250_handle->gyro.cal.offset.xyz.z);
 			break;
 		}
 	}
@@ -246,4 +251,9 @@ esp_err_t mpu9250_calibrate(mpu9250_cal_handle_t mpu9250_cal_handle) {
 
 	return ESP_OK;
 }
+esp_err_t mpu9250_save_calibration_data(mpu9250_cal_handle_t mpu9250_cal_handle) {
+	ESP_ERROR_CHECK(mpu9250_acc_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_gyro_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
 
+	return ESP_OK;
+}

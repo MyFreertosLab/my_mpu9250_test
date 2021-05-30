@@ -11,6 +11,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_system.h>
+#include <nvs_flash.h>
+#include <nvs.h>
 #include <driver/spi_master.h>
 #include <driver/gpio.h>
 #include <my_mpu9250_task.h>
@@ -18,7 +20,20 @@
 #include <mpu9250_gyro.h>
 #include <mpu9250_calibrator.h>
 
+esp_err_t my_mpu9250_init_flash(){
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+	return err;
+}
+
+
 void my_mpu9250_task_init(mpu9250_handle_t mpu9250) {
+	ESP_ERROR_CHECK(my_mpu9250_init_flash());
 }
 
 void my_mpu9250_temperature_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
@@ -99,6 +114,7 @@ void my_mpu9250_task(void *arg) {
 	// MPU9250 Handle
 	mpu9250_init_t mpu9250;
 	mpu9250_handle_t mpu9250_handle = &mpu9250;
+	my_mpu9250_task_init(mpu9250_handle);
 
 	mpu9250_cal_t calibrator;
 	calibrator.mpu9250_handle = mpu9250_handle;
@@ -109,6 +125,7 @@ void my_mpu9250_task(void *arg) {
 
 	// Calibration
 	my_mpu9250_static_calibration(mpu9250_cal_handle);
+	ESP_ERROR_CHECK(mpu9250_save_calibration_data(mpu9250_cal_handle));
 
 	// load circular buffer
 	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {

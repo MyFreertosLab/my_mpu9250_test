@@ -51,6 +51,9 @@ void mpu9250_cb_means(mpu9250_cb_handle_t cb, int16_t* mean) {
 	}
 	*mean = sum/CIRCULAR_BUFFER_SIZE;
 }
+void mpu9250_cb_last(mpu9250_cb_handle_t cb, int16_t* val) {
+	*val = cb->data[cb->cursor];
+}
 
 
 /************************************************************************
