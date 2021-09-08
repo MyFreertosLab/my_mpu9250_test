@@ -34,6 +34,7 @@ static void IRAM_ATTR mpu9250_isr(void* mpu9250_handle)
 		portYIELD_FROM_ISR(); // this wakes up sample_timer_task immediately
 	}
 }
+
 void mpu9250_cb_init(mpu9250_cb_handle_t cb) {
 	cb->cursor = -1;
 	memset(cb, 0, sizeof(mpu9250_cb_t));
@@ -72,8 +73,8 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
     // set Configuration Register
 //	printf("MPU9250: Gyro bandwidth 184Hz\n");
 //    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_CONFIG, 0x01)); // gyro bandwidth 184Hz
-	printf("MPU9250: Gyro bandwidth 5Hz\n");
-    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_CONFIG, 0x06)); // gyro bandwidth 5Hz
+	printf("MPU9250: Gyro bandwidth 184Hz\n");
+    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_CONFIG, 0x01));
 
     // set Gyro Configuration Register
 	printf("MPU9250: Gyro +-250deg/sec\n");
@@ -82,9 +83,13 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
     // set Acc Conf1 Register
 	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_16G));
 
-    // set Acc Conf2 Register
-	printf("MPU9250: Accel bandwidth 5Hz\n");
-    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_ACCEL_CONFIG_2, 0x06)); // bandwidth 5Hz
+    // Clock divider
+	printf("MPU9250: Accel bandwidth 460Hz\n");
+    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_ACCEL_CONFIG_2, 0x00));
+
+    // set Clock Divider
+	printf("MPU9250: Data rate 500Hz\n");
+    ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_SMPLRT_DIV, 0x01));
 
     // set PwrMgmt2 Register
     ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_PWR_MGMT_2, 0x00));
@@ -148,8 +153,7 @@ esp_err_t mpu9250_load_whoami(mpu9250_handle_t mpu9250_handle) {
 
 esp_err_t mpu9250_test_connection(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_load_whoami(mpu9250_handle);
-	return (mpu9250_handle->whoami == MPU9250_ID ? ESP_OK : ESP_FAIL);
-
+	return (((mpu9250_handle->whoami == MPU9250_ID) || (mpu9250_handle->whoami == MPU9250_ID_1)) ? ESP_OK : ESP_FAIL);
 }
 
 esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
@@ -159,10 +163,9 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->raw_data.data_s_xyz.accel_data_y = ((buff[2] << 8) | buff[3]);
 	mpu9250_handle->raw_data.data_s_xyz.accel_data_z = ((buff[4] << 8) | buff[5]);
 	mpu9250_handle->raw_data.data_s_xyz.temp_data = ((buff[6] << 8) | buff[7]);
-	mpu9250_handle->raw_data.data_s_xyz.gyro_data_x = ((buff[8] << 8) | buff[9]);
-	mpu9250_handle->raw_data.data_s_xyz.gyro_data_y = ((buff[10] << 8) | buff[11]);
-	mpu9250_handle->raw_data.data_s_xyz.gyro_data_z = ((buff[12] << 8) | buff[13]);
-
+	mpu9250_handle->raw_data.data_s_xyz.gyro_data_x = mpu9250_handle->raw_data.data_s_xyz.gyro_axis_direction_x*((buff[8] << 8) | buff[9]);
+	mpu9250_handle->raw_data.data_s_xyz.gyro_data_y = mpu9250_handle->raw_data.data_s_xyz.gyro_axis_direction_y*((buff[10] << 8) | buff[11]);
+	mpu9250_handle->raw_data.data_s_xyz.gyro_data_z = mpu9250_handle->raw_data.data_s_xyz.gyro_axis_direction_z*((buff[12] << 8) | buff[13]);
 	for(uint8_t i = 0; i < 3; i++) {
 		mpu9250_cb_add(&mpu9250_handle->accel.cb[i], mpu9250_handle->raw_data.data_s_vector.accel[i]);
 		mpu9250_cb_add(&mpu9250_handle->gyro.cb[i], mpu9250_handle->raw_data.data_s_vector.gyro[i]);

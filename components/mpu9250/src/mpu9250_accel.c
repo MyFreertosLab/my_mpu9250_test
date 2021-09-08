@@ -125,7 +125,7 @@ static esp_err_t mpu9250_acc_load_calibration_data(mpu9250_handle_t mpu9250_hand
     uint8_t flashed = 0;
     ESP_ERROR_CHECK(nvs_open("ACC_CAL", NVS_READWRITE, &my_handle));
     esp_err_t err = nvs_get_u8(my_handle, "FLASHED", &flashed);
-    if(err == ESP_ERR_NVS_NOT_FOUND) {
+    if(err == ESP_ERR_NVS_NOT_FOUND || flashed == 1 || 1 == 1) {
     	return mpu9250_acc_load_default_calibration_data(mpu9250_handle);
     }
     ESP_ERROR_CHECK(err);
@@ -167,6 +167,8 @@ static esp_err_t mpu9250_acc_load_calibration_data(mpu9250_handle_t mpu9250_hand
     ESP_ERROR_CHECK(nvs_get_i16(my_handle, "Z_SQM_16G", &mpu9250_handle->accel.cal.sqm[INV_FSR_16G].array[Z_POS]));
 
     printf("Accel: loaded calibration data from NVS ... \n");
+    // Close
+    nvs_close(my_handle);
 	return ESP_OK;
 }
 
