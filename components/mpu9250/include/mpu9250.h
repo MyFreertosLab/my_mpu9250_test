@@ -182,6 +182,15 @@ enum lp_accel_rate_e {
 };
 
 /*********************************
+********* Magnetometer ***********
+*********************************/
+typedef enum  {
+    INV_MAG_PRECISION_14_BITS = 0,
+    INV_MAG_PRECISION_16_BITS
+} mag_precision_e;
+
+
+/*********************************
 ******* Power Management *********
 *********************************/
 enum pwr_mgmt_1_bits {
@@ -245,8 +254,8 @@ enum ak8963_register {
 	AK8963_HZL = 0x7,
 	AK8963_HZH = 0x8,
 	AK8963_ST2 = 0x9,
-	AK8963_CNTL = 0xA,
-	AK8963_RSV = 0xB,
+	AK8963_CNTL1 = 0x0A,
+	AK8963_CNTL2 = 0x0B,
 	AK8963_ASTC = 0xC,
 	AK8963_TS1 = 0xD,
 	AK8963_TS2 = 0xE,
@@ -259,6 +268,19 @@ enum ak8963_register {
 #define MAG_CTRL_OP_MODE_MASK 0xF
 #define AK8963_ST1_DRDY_BIT 0
 #define AK8963_WHO_AM_I_RESULT 0x48
+#define AK8963_ADDRESS 0x0C
+#define AK8963_PWR_DOWN 0x00
+#define I2C_SLV0_EN 0x80
+#define MPU9250_I2C_READ_FLAG 0x80
+#define AK8963_RESET 0x01
+#define AK8963_SINGLE_MEASUREMENT 0x01
+#define I2C_MST_EN 0x20
+#define I2C_MST_CLK 0x0D
+#define H_RESET 0x80
+#define CLKSEL_PLL 0x01
+#define AK8963_FUSE_ROM 0x0F
+#define AK8963_PRECISION_MASK 0x10
+#define AK8963_MODE_2 0x06
 
 /*********************************
 ********* Low Pass Filter ********
@@ -287,6 +309,24 @@ enum clock_sel_e {
 /*********************************
 *********** Utilities ************
 *********************************/
+typedef union {
+   int8_t array[3];
+   struct {
+     int8_t x;
+     int8_t y;
+     int8_t z;
+   } xyz;
+} mpu9250_int8_3d_t;
+
+typedef union {
+   uint8_t array[3];
+   struct {
+     uint8_t x;
+     uint8_t y;
+     uint8_t z;
+   } xyz;
+} mpu9250_uint8_3d_t;
+
 typedef union {
    int16_t array[3];
    struct {
@@ -350,6 +390,15 @@ typedef union {
    } xyz;
 } mpu9250_double_3d_t;
 
+typedef union {
+   float array[3];
+   struct {
+     float x;
+     float y;
+     float z;
+   } xyz;
+} mpu9250_float_3d_t;
+
 /* Se necessario usare
  * float fixed point
  * 22bit integer, 10bit decimal
@@ -384,6 +433,7 @@ typedef union {
  *     P(k)=(1-K(k))*P(k)
  */
 typedef struct {
+	uint8_t initialized;
 	int16_t X,sample;
 	uint16_t R;
 	float P,Q,K;
@@ -405,6 +455,10 @@ typedef mpu9250_var_t* mpu9250_var_buff_t;
 typedef mpu9250_int_3d_t mpu9250_sqm_t;
 typedef mpu9250_sqm_t* mpu9250_sqm_buff_t;
 
+typedef mpu9250_float_3d_t mpu9250_scale_factors_t;
+typedef mpu9250_float_3d_t mpu9250_scaled_offset_t;
+
+
 /* RPY */
 typedef mpu9250_double_3d_t mpu9250_rpy_t;
 
@@ -415,6 +469,18 @@ typedef struct {
     mpu9250_sqm_t sqm[4];
     mpu9250_kalman_t kalman[3];
 } mpu9250_cal_data_t;
+
+typedef struct {
+    mpu9250_uint8_3d_t asa;
+	mpu9250_scale_factors_t scale_factors; // factory factors
+    mpu9250_offset_t offset[2];
+    mpu9250_means_t means[4];
+    mpu9250_var_t var[4];
+    mpu9250_sqm_t sqm[4];
+    mpu9250_kalman_t kalman[3];
+	mpu9250_scale_factors_t scale_factors2[2]; // correction of factory factors
+    mpu9250_scaled_offset_t scaled_offset[2];
+} mpu9250_mag_cal_data_t;
 
 /* Circular Buffer */
 #define CIRCULAR_BUFFER_SIZE 5
@@ -436,9 +502,8 @@ typedef union {
      int16_t accel[3];
      int16_t temp;
      int16_t gyro[3];
-     int16_t ext[12];
-     int8_t gyro_axis_direction[3];
-     int8_t accel_axis_direction[3];
+     int16_t mag[3];
+     int16_t ext[9];
    } data_s_vector;
    struct {
      int16_t accel_data_x;
@@ -448,13 +513,10 @@ typedef union {
      int16_t gyro_data_x;
      int16_t gyro_data_y;
      int16_t gyro_data_z;
-     int16_t ext_data[12];
-     int8_t gyro_axis_direction_x;
-     int8_t gyro_axis_direction_y;
-     int8_t gyro_axis_direction_z;
-     int8_t accel_axis_direction_x;
-     int8_t accel_axis_direction_y;
-     int8_t accel_axis_direction_z;
+     int16_t mag_data_x;
+     int16_t mag_data_y;
+     int16_t mag_data_z;
+     int16_t ext_data[9];
    } data_s_xyz;
 } mpu9250_raw_data_t;
 typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
@@ -484,6 +546,20 @@ typedef struct mpu9250_gyro_s {
 typedef uint8_t mpu9250_int_status_t;
 
 /*********************************
+********* MAGNETOMETER ***********
+*********************************/
+typedef struct mpu9250_mag_s {
+	mpu9250_mag_cal_data_t cal; // mag calibration data
+	mag_precision_e precision;
+    float precision_factor;
+	mpu9250_rpy_t rpy;
+    mpu9250_float_3d_t inertial_frame_data; // toIntertialFrame(body_frame_data)
+    mpu9250_float_3d_t body_frame_data; // toBodyFrame(inertial_data)
+    float module;
+    uint8_t drdy;
+} mpu9250_mag_t;
+
+/*********************************
 ******** MPU9250 HANDLE **********
 *********************************/
 typedef struct mpu9250_init_s {
@@ -503,8 +579,17 @@ typedef struct mpu9250_init_s {
 
     mpu9250_accel_t accel;
     mpu9250_gyro_t gyro;
+    mpu9250_mag_t mag;
 
 	double attitude[3];
+
+	float cy; // cos(Yaw)
+	float cp; // cos(Pitch)
+	float cr; // cos(Roll)
+	float sy; // sin(Yaw)
+	float sp; // sin(Pitch)
+	float sr; // sin(Roll)
+
 
 } mpu9250_init_t;
 
@@ -513,6 +598,7 @@ typedef mpu9250_init_t* mpu9250_handle_t;
 #define MPU9250_READ_FLAG 0x80
 
 /* Private Methods */
+void mpu9250_cb_add(mpu9250_cb_handle_t cb, int16_t val);
 void mpu9250_cb_means(mpu9250_cb_handle_t cb, int16_t* mean);
 void mpu9250_cb_last(mpu9250_cb_handle_t cb, int16_t* val);
 

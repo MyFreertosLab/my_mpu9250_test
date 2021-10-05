@@ -29,8 +29,6 @@
 #define PIN_NUM_INT  GPIO_NUM_2
 #endif
 
-
-
 esp_err_t mpu9250_read8(mpu9250_handle_t mpu9250_handle, uint8_t reg, uint8_t* val) {
 	esp_err_t ret;
 	spi_transaction_t t;

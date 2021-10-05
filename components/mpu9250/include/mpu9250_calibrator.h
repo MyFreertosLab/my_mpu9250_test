@@ -24,6 +24,7 @@ typedef struct mpu9250_cal_s {
 
 typedef mpu9250_cal_t* mpu9250_cal_handle_t;
 
+esp_err_t mpu9250_acc_gyro_calibrate(mpu9250_cal_handle_t mpu9250_cal_handle);
 esp_err_t mpu9250_calibrate(mpu9250_cal_handle_t mpu9250_cal_handle);
 esp_err_t mpu9250_save_calibration_data(mpu9250_cal_handle_t mpu9250_cal_handle);
 

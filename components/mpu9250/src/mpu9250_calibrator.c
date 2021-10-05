@@ -13,14 +13,14 @@
 #include <nvs.h>
 #include <mpu9250_accel.h>
 #include <mpu9250_gyro.h>
+#include <mpu9250_mag_calibrator.h>
 #include <mpu9250_calibrator.h>
 #include <math.h>
 
 static esp_err_t mpu9250_cal_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs) {
-	const TickType_t xMaxBlockTime = pdMS_TO_TICKS( 500 );
 	printf("Discarding %d Samples ... \n", num_msgs);
 	for(uint16_t i = 0; i < num_msgs; i++) {
-		ulTaskNotifyTake( pdTRUE,xMaxBlockTime );
+		ulTaskNotifyTake( pdTRUE,pdMS_TO_TICKS( 500 ));
 	}
 	return ESP_OK;
 }
@@ -57,8 +57,8 @@ static esp_err_t mpu9250_cal_load_offset(mpu9250_cal_handle_t mpu9250_cal_handle
 }
 
 static esp_err_t mpu9250_cal_init(mpu9250_cal_handle_t mpu9250_cal_handle) {
-	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_cal_handle->mpu9250_handle, mpu9250_cal_handle->mpu9250_handle->accel.fsr=INV_FSR_16G));
-	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_cal_handle->mpu9250_handle, mpu9250_cal_handle->mpu9250_handle->gyro.fsr=INV_FSR_2000DPS));
+	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_cal_handle->mpu9250_handle, INV_FSR_16G));
+	ESP_ERROR_CHECK(mpu9250_gyro_set_fsr(mpu9250_cal_handle->mpu9250_handle, INV_FSR_2000DPS));
 
 	ESP_ERROR_CHECK(mpu9250_cal_load_offset(mpu9250_cal_handle));
 
@@ -242,18 +242,24 @@ static esp_err_t mpu9250_cal_calc_offset(mpu9250_cal_handle_t mpu9250_cal_handle
 /************************************************************************
  ****************** A P I  I M P L E M E N T A T I O N ******************
  ************************************************************************/
+esp_err_t mpu9250_acc_gyro_calibrate(mpu9250_cal_handle_t mpu9250_cal_handle) {
+	ESP_ERROR_CHECK(mpu9250_cal_calc_offset(mpu9250_cal_handle));
+	ESP_ERROR_CHECK(mpu9250_cal_calc_biases(mpu9250_cal_handle));
+	return ESP_OK;
+}
 esp_err_t mpu9250_calibrate(mpu9250_cal_handle_t mpu9250_cal_handle) {
 	ESP_ERROR_CHECK(mpu9250_cal_init(mpu9250_cal_handle));
 	ESP_ERROR_CHECK(mpu9250_cal_discard_messages(mpu9250_cal_handle->mpu9250_handle, 10000));
 
-	ESP_ERROR_CHECK(mpu9250_cal_calc_offset(mpu9250_cal_handle));
-	ESP_ERROR_CHECK(mpu9250_cal_calc_biases(mpu9250_cal_handle));
-
+	ESP_ERROR_CHECK(mpu9250_acc_gyro_calibrate(mpu9250_cal_handle));
+	ESP_ERROR_CHECK(mpu9250_mag_calibrate(mpu9250_cal_handle->mpu9250_handle));
 	return ESP_OK;
 }
 esp_err_t mpu9250_save_calibration_data(mpu9250_cal_handle_t mpu9250_cal_handle) {
 	ESP_ERROR_CHECK(mpu9250_acc_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_gyro_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_mag_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
 
 	return ESP_OK;
 }
+
