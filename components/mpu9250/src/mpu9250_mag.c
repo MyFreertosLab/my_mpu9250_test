@@ -122,14 +122,17 @@ static esp_err_t mpu9250_mag_init_kalman_filter(mpu9250_handle_t mpu9250_handle)
 	return ESP_OK;
 }
 
+
 /*
- * this are ok:
- *
- * mag_asa [181, 182, 169]
- * mag_scale [0.18094, 0.18152, 0.17391]
- * MPU9250: Mag Precision 0.15
- * Mag offsets: [21.739,22.290,29.761]
- */
+* Mag soff: [30.87274,-20.66476,20.37856]
+* Mag sf2: [1.06298,1.01071,0.92631]
+* Mag offset calculated at 0.15 precision
+*
+* Mag soff: [7.09354,-4.60390,1.97933]
+* Mag sf2: [0.95312,0.90874,1.13813]
+* Mag offset calculated at 0.6 precision
+*
+*/
 static esp_err_t mpu9250_mag_load_default_calibration_data(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->mag.cal.var[INV_MAG_PRECISION_14_BITS].array[X_POS]=1.0f;
 	mpu9250_handle->mag.cal.var[INV_MAG_PRECISION_14_BITS].array[Y_POS]=1.0f;
@@ -168,7 +171,7 @@ static esp_err_t mpu9250_mag_load_calibration_data(mpu9250_handle_t mpu9250_hand
     uint8_t flashed = 0;
     ESP_ERROR_CHECK(nvs_open("MAG_CAL", NVS_READWRITE, &my_handle));
     esp_err_t err = nvs_get_u8(my_handle, "FLASHED", &flashed);
-    if(err == ESP_ERR_NVS_NOT_FOUND) {
+    if(err == ESP_ERR_NVS_NOT_FOUND || 1 == 1) {
     	return mpu9250_mag_load_default_calibration_data(mpu9250_handle);
     }
     ESP_ERROR_CHECK(err);
@@ -312,6 +315,7 @@ esp_err_t mpu9250_mag_init(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->mag.rpy.xyz.z = 0;
 
 	printf("Mag offsets: [%2.3f,%2.3f,%2.3f]\n", mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[X_POS], mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[Y_POS], mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[Z_POS]);
+	printf("Mag factors2: [%2.3f,%2.3f,%2.3f]\n", mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[X_POS], mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[Y_POS], mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[Z_POS]);
 	ESP_ERROR_CHECK(mpu9250_mag_set_continuous_reading(mpu9250_handle));
 	return ESP_OK;
 }
@@ -353,7 +357,7 @@ esp_err_t mpu9250_mag_scale_data_in_body_frame(mpu9250_handle_t mpu9250_handle) 
 	// allinea gli assi del mag con quelli del body frame e scala i valori con i fattori di scala di fabbrica e quelli corretti
 	// applica gli scaled_offset calcolati sui valori già scalati e con assi convertiti
 	mpu9250_handle->mag.body_frame_data.array[X_POS] = mpu9250_handle->mag.cal.kalman[Y_POS].X*mpu9250_handle->mag.cal.scale_factors.array[Y_POS]*mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[X_POS] - mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[X_POS];
-	mpu9250_handle->mag.body_frame_data.array[Y_POS] = mpu9250_handle->mag.cal.kalman[X_POS].X*mpu9250_handle->mag.cal.scale_factors.array[X_POS]*mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[Y_POS] - mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[Y_POS];
+	mpu9250_handle->mag.body_frame_data.array[Y_POS] = -(mpu9250_handle->mag.cal.kalman[X_POS].X*mpu9250_handle->mag.cal.scale_factors.array[X_POS]*mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[Y_POS]) - mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[Y_POS];
 	mpu9250_handle->mag.body_frame_data.array[Z_POS] = -mpu9250_handle->mag.cal.kalman[Z_POS].X*mpu9250_handle->mag.cal.scale_factors.array[Z_POS]*mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[Z_POS] - mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[Z_POS];
 	mpu9250_handle->mag.module = sqrt(mpu9250_handle->mag.body_frame_data.array[X_POS]*mpu9250_handle->mag.body_frame_data.array[X_POS]+mpu9250_handle->mag.body_frame_data.array[Y_POS]*mpu9250_handle->mag.body_frame_data.array[Y_POS]+mpu9250_handle->mag.body_frame_data.array[Z_POS]*mpu9250_handle->mag.body_frame_data.array[Z_POS]);
 	return ESP_OK;

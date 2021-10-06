@@ -116,8 +116,10 @@ static esp_err_t mpu9250_mag_cal_calc_bias(mpu9250_handle_t mpu9250_handle) {
 static esp_err_t mpu9250_mag_cal_calc_max_min(mpu9250_handle_t mpu9250_handle) {
 	float max[3] = {-4912, -4912, -4912};
 	float min[3] = {4912, 4912, 4912};
-
-	for(uint32_t i = 0; i < 40000; i++ ) {
+	for(uint32_t i = 0; i < 18000; i++ ) {
+		if((i % 1000) == 0) {
+			printf("cycle n. [%d]\n", i);
+		}
 		ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS( 500 ));
 		ESP_ERROR_CHECK(mpu9250_mag_load_raw_data(mpu9250_handle));
 		ESP_ERROR_CHECK(mpu9250_mag_update_state(mpu9250_handle));
