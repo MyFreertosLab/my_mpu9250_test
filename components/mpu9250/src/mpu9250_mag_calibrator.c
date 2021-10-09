@@ -20,7 +20,7 @@
  ************************************************************************/
 
 static esp_err_t mpu9250_mag_load_raw_data(mpu9250_handle_t mpu9250_handle) {
-	uint8_t max_retry = 10;
+	uint16_t max_retry = 100;
 	do {
 		max_retry--;
 		ulTaskNotifyTake( pdTRUE,pdMS_TO_TICKS( 500 ) );
