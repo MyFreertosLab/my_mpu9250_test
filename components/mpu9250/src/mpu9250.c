@@ -260,7 +260,6 @@ esp_err_t mpu9250_calc_rpy(mpu9250_handle_t mpu9250_handle) {
 
 	ESP_ERROR_CHECK(mpu9250_calc_cos_sin_rpy(mpu9250_handle));
 
-	//
 	float mx = mpu9250_handle->mag.body_frame_data.array[X_POS];
 	float my = mpu9250_handle->mag.body_frame_data.array[Y_POS];
 	float mz = mpu9250_handle->mag.body_frame_data.array[Z_POS];

@@ -171,7 +171,7 @@ static esp_err_t mpu9250_mag_load_calibration_data(mpu9250_handle_t mpu9250_hand
     uint8_t flashed = 0;
     ESP_ERROR_CHECK(nvs_open("MAG_CAL", NVS_READWRITE, &my_handle));
     esp_err_t err = nvs_get_u8(my_handle, "FLASHED", &flashed);
-    if(err == ESP_ERR_NVS_NOT_FOUND || 1 == 1) {
+    if(err == ESP_ERR_NVS_NOT_FOUND) {
     	return mpu9250_mag_load_default_calibration_data(mpu9250_handle);
     }
     ESP_ERROR_CHECK(err);

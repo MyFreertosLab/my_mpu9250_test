@@ -173,15 +173,16 @@ static esp_err_t mpu9250_acc_load_calibration_data(mpu9250_handle_t mpu9250_hand
 }
 
 static esp_err_t mpu9250_acc_calc_rpy(mpu9250_handle_t mpu9250_handle) {
-	int64_t modq = mpu9250_handle->accel.cal.kalman[X_POS].X*mpu9250_handle->accel.cal.kalman[X_POS].X+
+	double modq = sqrt((double)(mpu9250_handle->accel.cal.kalman[X_POS].X*mpu9250_handle->accel.cal.kalman[X_POS].X+
 			    mpu9250_handle->accel.cal.kalman[Y_POS].X*mpu9250_handle->accel.cal.kalman[Y_POS].X+
-				mpu9250_handle->accel.cal.kalman[Z_POS].X*mpu9250_handle->accel.cal.kalman[Z_POS].X;
+				mpu9250_handle->accel.cal.kalman[Z_POS].X*mpu9250_handle->accel.cal.kalman[Z_POS].X));
+
 	// range of values: [-pi/2,+pi/2] rad
 	// Accel X angle is Pitch
 	// Accel Y angle is Roll
-	mpu9250_handle->accel.rpy.xyz.x = PI_HALF - acos((double)mpu9250_handle->accel.cal.kalman[Y_POS].X/sqrt((double)modq));
-	mpu9250_handle->accel.rpy.xyz.y = - PI_HALF + acos((double)mpu9250_handle->accel.cal.kalman[X_POS].X/sqrt((double)modq));
-	mpu9250_handle->accel.rpy.xyz.z = acos((double)mpu9250_handle->accel.cal.kalman[Z_POS].X/sqrt((double)modq));
+	mpu9250_handle->accel.rpy.xyz.x = PI_HALF - acos((double)mpu9250_handle->accel.cal.kalman[Y_POS].X/modq);
+	mpu9250_handle->accel.rpy.xyz.y = - PI_HALF + acos((double)mpu9250_handle->accel.cal.kalman[X_POS].X/modq);
+	mpu9250_handle->accel.rpy.xyz.z = acos((double)mpu9250_handle->accel.cal.kalman[Z_POS].X/modq);
 	return ESP_OK;
 }
 
