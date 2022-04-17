@@ -230,7 +230,7 @@ esp_err_t mpu9250_to_inertial_frame(mpu9250_handle_t mpu9250_handle, mpu9250_flo
 
 	return ESP_OK;
 }
-esp_err_t mpu9250_calc_gravity(mpu9250_handle_t mpu9250_handle) {
+esp_err_t mpu9250_calc_gravity_bf(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->attitude[X_POS] = -mpu9250_handle->sp;
 	mpu9250_handle->attitude[Y_POS] = mpu9250_handle->cp * mpu9250_handle->sr;
 	mpu9250_handle->attitude[Z_POS] = mpu9250_handle->cp * mpu9250_handle->cr;
@@ -287,7 +287,7 @@ esp_err_t mpu9250_update_state(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_mag_update_state(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_calc_rpy(mpu9250_handle));
 
-	ESP_ERROR_CHECK(mpu9250_calc_gravity(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_calc_gravity_bf(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_calc_mag_frames(mpu9250_handle));
 	return ESP_OK;
 }

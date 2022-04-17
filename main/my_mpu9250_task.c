@@ -60,16 +60,6 @@ void my_mpu9250_temperature_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 	}
 }
 
-void my_mpu9250_static_calibration(mpu9250_cal_handle_t mpu9250_cal_handle) {
-	// calibration offset and biases
-	ESP_ERROR_CHECK(mpu9250_calibrate(mpu9250_cal_handle));
-
-	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
-		if( ulTaskNotifyTake( pdTRUE,pdMS_TO_TICKS( 500 ) ) == 1) {
-			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_cal_handle->mpu9250_handle));
-		}
-	}
-}
 static esp_err_t mpu9250_discard_messages(mpu9250_handle_t mpu9250_handle, uint16_t num_msgs) {
 	printf("Discarding %d Samples ... \n", num_msgs);
 	for(uint16_t i = 0; i < num_msgs; i++) {
@@ -124,7 +114,8 @@ void my_mpu9250_task(void *arg) {
 	ESP_ERROR_CHECK(mpu9250_init(mpu9250_handle));
 
 	// Calibration
-	my_mpu9250_static_calibration(mpu9250_cal_handle);
+	// calibration offset and biases
+	ESP_ERROR_CHECK(mpu9250_calibrate(mpu9250_cal_handle));
 	ESP_ERROR_CHECK(mpu9250_save_calibration_data(mpu9250_cal_handle));
 
 	// load circular buffer
