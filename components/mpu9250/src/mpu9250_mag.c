@@ -25,7 +25,7 @@ static esp_err_t WriteAk8963Register(mpu9250_handle_t mpu9250_handle, uint8_t re
 			mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_ADDR, AK8963_ADDRESS));
 	ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_REG, reg));
 	ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_DO, data));
-	uint8_t slv0_en = (I2C_SLV0_EN | 0x01);
+	uint8_t slv0_en = (I2C_SLV_EN | 0x01);
 	ESP_ERROR_CHECK(
 			mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_CTRL, slv0_en));
 	return ESP_OK;
@@ -36,7 +36,7 @@ static esp_err_t ReadAk8963Register(mpu9250_handle_t mpu9250_handle, uint8_t reg
 	ESP_ERROR_CHECK(
 			mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_ADDR, addr));
 	ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_REG, reg));
-	uint8_t slv0_en = (I2C_SLV0_EN | 0x01);
+	uint8_t slv0_en = (I2C_SLV_EN | 0x01);
 	ESP_ERROR_CHECK(
 			mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_CTRL, slv0_en));
 	return ESP_OK;
@@ -46,7 +46,7 @@ static esp_err_t ReadAk8963Registers(mpu9250_handle_t mpu9250_handle, uint8_t re
 	ESP_ERROR_CHECK(
 			mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_ADDR, addr));
 	ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_REG, reg));
-	uint8_t slv0_en = (I2C_SLV0_EN | count);
+	uint8_t slv0_en = (I2C_SLV_EN | count);
 	ESP_ERROR_CHECK(
 			mpu9250_write8(mpu9250_handle, MPU9250_I2C_SLV0_CTRL, slv0_en));
 	return ESP_OK;

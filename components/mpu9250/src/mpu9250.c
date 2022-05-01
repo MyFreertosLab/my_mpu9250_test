@@ -18,6 +18,7 @@
 #include <mpu9250_accel.h>
 #include <mpu9250_gyro.h>
 #include <mpu9250_mag.h>
+#include <mpu9250_baro.h>
 #include <driver/gpio.h>
 
 /************************************************************************
@@ -154,6 +155,12 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	// Init Gyro
 	printf("MPU9250: Init Gyro\n");
 	ESP_ERROR_CHECK(mpu9250_gyro_init(mpu9250_handle));
+
+
+	// init Baro
+	printf("MPU9250: Init Barometer\n");
+	vTaskDelay(pdMS_TO_TICKS(10));
+	ESP_ERROR_CHECK(mpu9250_baro_init(mpu9250_handle));
 
 	return ESP_OK;
 }
