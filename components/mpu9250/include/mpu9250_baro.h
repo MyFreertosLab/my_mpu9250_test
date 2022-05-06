@@ -16,6 +16,7 @@
 #define BMP388_REG_CHIP_ID 0x00
 
 
+esp_err_t mpu9250_baro_test(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_baro_init(mpu9250_handle_t mpu9250_handle);
 
 

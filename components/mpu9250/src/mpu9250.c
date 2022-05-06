@@ -156,12 +156,15 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	printf("MPU9250: Init Gyro\n");
 	ESP_ERROR_CHECK(mpu9250_gyro_init(mpu9250_handle));
 
-
 	// init Baro
 	printf("MPU9250: Init Barometer\n");
-	vTaskDelay(pdMS_TO_TICKS(10));
-	ESP_ERROR_CHECK(mpu9250_baro_init(mpu9250_handle));
-
+	esp_err_t baroTestRes = mpu9250_baro_test(mpu9250_handle);
+	if(baroTestRes == ESP_OK) {
+		ESP_ERROR_CHECK(mpu9250_baro_init(mpu9250_handle));
+		printf("MPU9250: Barometer initialized\n");
+	} else {
+		printf("MPU9250: Barometer not present!\n");
+	}
 	return ESP_OK;
 }
 

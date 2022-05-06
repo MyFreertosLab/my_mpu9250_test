@@ -560,6 +560,14 @@ typedef struct mpu9250_mag_s {
 } mpu9250_mag_t;
 
 /*********************************
+********* BAROMETER ***********
+*********************************/
+typedef struct mpu9250_baro_s {
+	uint8_t present;
+    uint8_t drdy;
+} mpu9250_baro_t;
+
+/*********************************
 ******** MPU9250 HANDLE **********
 *********************************/
 typedef struct mpu9250_init_s {
@@ -580,6 +588,7 @@ typedef struct mpu9250_init_s {
     mpu9250_accel_t accel;
     mpu9250_gyro_t gyro;
     mpu9250_mag_t mag;
+    mpu9250_baro_t baro;
 
 	double attitude[3];
 
