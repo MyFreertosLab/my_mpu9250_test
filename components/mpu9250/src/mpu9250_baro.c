@@ -59,7 +59,7 @@ esp_err_t mpu9250_baro_test(mpu9250_handle_t mpu9250_handle) {
 	esp_err_t result = ReadBmp388Register(mpu9250_handle, BMP388_REG_CHIP_ID);
 	if(result == ESP_OK) {
 		vTaskDelay(pdMS_TO_TICKS(10));
-		result = mpu9250_read8(mpu9250_handle, MPU9250_EXT_SENS_DATA_08,&bmp388_whoAmI);
+		result = mpu9250_read8(mpu9250_handle, MPU9250_EXT_SENS_DATA_00,&bmp388_whoAmI);
 		if(result == ESP_OK) {
 			if (bmp388_whoAmI != BMP388_CHIP_ID) {
 				printf("BMP388 Error reading chip ID: [%d]\n",bmp388_whoAmI);

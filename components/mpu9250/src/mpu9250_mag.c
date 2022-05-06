@@ -239,9 +239,15 @@ static esp_err_t mpu9250_mag_calc_rpy(mpu9250_handle_t mpu9250_handle) {
 }
 
 static esp_err_t mpu9250_mag_prepare(mpu9250_handle_t mpu9250_handle) {
+
 	/******************************************************************************************
 	 * AK8963
 	 ******************************************************************************************/
+	// reset AK8963
+    ESP_ERROR_CHECK(
+    		WriteAk8963Register(mpu9250_handle, AK8963_CNTL2, AK8963_RESET));
+    vTaskDelay(pdMS_TO_TICKS(100));
+
 	// Read AK8963 who am i
 	uint8_t ak8963_whoAmI = 0xFF;
 	ESP_ERROR_CHECK(
@@ -316,7 +322,6 @@ esp_err_t mpu9250_mag_init(mpu9250_handle_t mpu9250_handle) {
 
 	printf("Mag offsets: [%2.3f,%2.3f,%2.3f]\n", mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[X_POS], mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[Y_POS], mpu9250_handle->mag.cal.scaled_offset[mpu9250_handle->mag.precision].array[Z_POS]);
 	printf("Mag factors2: [%2.3f,%2.3f,%2.3f]\n", mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[X_POS], mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[Y_POS], mpu9250_handle->mag.cal.scale_factors2[mpu9250_handle->mag.precision].array[Z_POS]);
-	ESP_ERROR_CHECK(mpu9250_mag_set_continuous_reading(mpu9250_handle));
 	return ESP_OK;
 }
 

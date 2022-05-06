@@ -272,6 +272,7 @@ enum ak8963_register {
 #define AK8963_PWR_DOWN 0x00
 #define I2C_SLV_EN 0x80
 #define MPU9250_I2C_READ_FLAG 0x80
+#define MPU9250_RESET 0x80
 #define AK8963_RESET 0x01
 #define AK8963_SINGLE_MEASUREMENT 0x01
 #define I2C_MST_EN 0x20

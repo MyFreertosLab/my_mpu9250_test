@@ -71,6 +71,14 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 		mpu9250_cb_init(&mpu9250_handle->gyro.cb[i]);
 	}
 
+	// TODO: must start with reset mpu9250
+	ESP_ERROR_CHECK(
+			mpu9250_write8(mpu9250_handle, MPU9250_PWR_MGMT_1, MPU9250_RESET));
+	vTaskDelay(pdMS_TO_TICKS(100));
+
+	/******************************************************************************************
+	 * CLOCK & I2C
+	 ******************************************************************************************/
 	ESP_ERROR_CHECK(
 			mpu9250_write8(mpu9250_handle, MPU9250_PWR_MGMT_1, CLKSEL_PLL));
 	vTaskDelay(pdMS_TO_TICKS(10));
@@ -87,7 +95,23 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
     ESP_ERROR_CHECK(mpu9250_read8(mpu9250_handle, MPU9250_I2C_MST_STATUS, &i2c_mst_status));
     printf("I2C STATUS: [%d]\n", i2c_mst_status);
 
+	/******************************************************************************************
+	 * MEGNETOMETER
+	 ******************************************************************************************/
 	ESP_ERROR_CHECK(mpu9250_mag_init(mpu9250_handle));
+
+
+	/******************************************************************************************
+	 * BAROMETER
+	 ******************************************************************************************/
+	printf("MPU9250: Init Barometer\n");
+	esp_err_t baroTestRes = mpu9250_baro_test(mpu9250_handle);
+	if(baroTestRes == ESP_OK) {
+		ESP_ERROR_CHECK(mpu9250_baro_init(mpu9250_handle));
+		printf("MPU9250: Barometer initialized\n");
+	} else {
+		printf("MPU9250: Barometer not present!\n");
+	}
 
 
 	/******************************************************************************************
@@ -124,9 +148,6 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	// set Int Status Register
 	ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_STATUS, 0x00)); // reset all interrupts?
 
-	printf("MPU9250: Enable Interrupts\n");
-	ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_ENABLE, 0x01)); // data ready int
-
 	mpu9250_handle->attitude[X_POS] = 0.0f;
 	mpu9250_handle->attitude[Y_POS] = 0.0f;
 	mpu9250_handle->attitude[Z_POS] = 1.0f;
@@ -156,15 +177,12 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	printf("MPU9250: Init Gyro\n");
 	ESP_ERROR_CHECK(mpu9250_gyro_init(mpu9250_handle));
 
-	// init Baro
-	printf("MPU9250: Init Barometer\n");
-	esp_err_t baroTestRes = mpu9250_baro_test(mpu9250_handle);
-	if(baroTestRes == ESP_OK) {
-		ESP_ERROR_CHECK(mpu9250_baro_init(mpu9250_handle));
-		printf("MPU9250: Barometer initialized\n");
-	} else {
-		printf("MPU9250: Barometer not present!\n");
-	}
+
+	printf("MPU9250: Enable Interrupts\n");
+	ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_ENABLE, 0x01)); // data ready int
+
+	ESP_ERROR_CHECK(mpu9250_mag_set_continuous_reading(mpu9250_handle));
+
 	return ESP_OK;
 }
 
