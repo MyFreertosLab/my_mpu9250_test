@@ -181,7 +181,7 @@ enum lp_accel_rate_e {
     INV_LPA_640HZ
 };
 
-/*********************************
+/*********************************mpu9250_handle
 ********* Magnetometer ***********
 *********************************/
 typedef enum  {
@@ -483,6 +483,37 @@ typedef struct {
     mpu9250_scaled_offset_t scaled_offset[2];
 } mpu9250_mag_cal_data_t;
 
+typedef struct {
+    uint16_t par_t1;
+    uint16_t par_t2;
+    int8_t par_t3;
+    int16_t par_p1;
+    int16_t par_p2;
+    int8_t par_p3;
+    int8_t par_p4;
+    uint16_t par_p5;
+    uint16_t par_p6;
+    int8_t par_p7;
+    int8_t par_p8;
+    int16_t par_p9;
+    int8_t par_p10;
+    int8_t par_p11;
+    double q_par_t1;
+    double q_par_t2;
+    double q_par_t3;
+    double q_par_p1;
+    double q_par_p2;
+    double q_par_p3;
+    double q_par_p4;
+    double q_par_p5;
+    double q_par_p6;
+    double q_par_p7;
+    double q_par_p8;
+    double q_par_p9;
+    double q_par_p10;
+    double q_par_p11;
+} mpu9250_baro_cal_data_t;
+
 /* Circular Buffer */
 #define CIRCULAR_BUFFER_SIZE 5
 typedef struct {
@@ -504,7 +535,9 @@ typedef union {
      int16_t temp;
      int16_t gyro[3];
      int16_t mag[3];
-     int16_t ext[9];
+     uint32_t pressure;
+     uint32_t temperature;
+     int16_t ext[5];
    } data_s_vector;
    struct {
      int16_t accel_data_x;
@@ -517,7 +550,9 @@ typedef union {
      int16_t mag_data_x;
      int16_t mag_data_y;
      int16_t mag_data_z;
-     int16_t ext_data[9];
+     uint32_t pressure;
+     uint32_t temperature;
+     int16_t ext_data[5];
    } data_s_xyz;
 } mpu9250_raw_data_t;
 typedef mpu9250_raw_data_t* mpu9250_raw_data_buff_t;
@@ -564,6 +599,10 @@ typedef struct mpu9250_mag_s {
 ********* BAROMETER ***********
 *********************************/
 typedef struct mpu9250_baro_s {
+	mpu9250_baro_cal_data_t cal;
+	double pressure;
+	double temperature;
+	float altitude;
 	uint8_t present;
     uint8_t drdy;
 } mpu9250_baro_t;

@@ -182,6 +182,7 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_write8(mpu9250_handle, MPU9250_INT_ENABLE, 0x01)); // data ready int
 
 	ESP_ERROR_CHECK(mpu9250_mag_set_continuous_reading(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_baro_set_continuous_reading(mpu9250_handle));
 
 	return ESP_OK;
 }
@@ -227,7 +228,7 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 	}
 
 
-	// read mag data
+	// read external sensor data
 	for(uint8_t i = 0; i<16; i++) {
 		buff[i] = 0;
 	}
@@ -238,6 +239,11 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->raw_data.data_s_vector.mag[Y_POS] = ((buff[4] << 8) | buff[3]);
 	mpu9250_handle->raw_data.data_s_vector.mag[Z_POS] = ((buff[6] << 8) | buff[5]);
 
+	if(mpu9250_handle->baro.present) {
+		mpu9250_handle->raw_data.data_s_vector.pressure = ((buff[10] << 16) | (buff[9] << 8) | buff[8]);
+		mpu9250_handle->raw_data.data_s_vector.temperature = ((buff[13] << 16) | (buff[12] << 8) | buff[11]);
+		ESP_ERROR_CHECK(mpu9250_baro_compensate(mpu9250_handle));
+	}
 	return ret;
 }
 
