@@ -74,6 +74,8 @@
 #define BMP388_PWR_CTRL_PRESSURE_ENABLED          0x01
 #define BMP388_PWR_CTRL_TEMPERATURE_ENABLED       0x02
 #define BMP388_PWR_CTRL_NORMAL_MODE               0x30
+#define BMP388_DRDY_PRESS_STATUS                  0x10
+#define BMP388_DRDY_TEMP_STATUS                   0x20
 #define BMP388_SEA_LEVEL_PRESSURE_HPA             1013.25f
 
 esp_err_t mpu9250_baro_test(mpu9250_handle_t mpu9250_handle);

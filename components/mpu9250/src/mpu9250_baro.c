@@ -260,7 +260,7 @@ esp_err_t mpu9250_baro_test(mpu9250_handle_t mpu9250_handle) {
 esp_err_t mpu9250_baro_set_continuous_reading(mpu9250_handle_t mpu9250_handle) {
     // Mpu9250 start reading BMP388
     vTaskDelay(pdMS_TO_TICKS(100));
-    ReadBmp388Registers(mpu9250_handle, BMP388_REG_DATA, 6);
+    ReadBmp388Registers(mpu9250_handle, BMP388_REG_SENS_STATUS, 7);
 	printf("MPU9250: continuous reading for BMP388 on SLV1\n");
 	return ESP_OK;
 }

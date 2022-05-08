@@ -240,9 +240,12 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->raw_data.data_s_vector.mag[Z_POS] = ((buff[6] << 8) | buff[5]);
 
 	if(mpu9250_handle->baro.present) {
-		mpu9250_handle->raw_data.data_s_vector.pressure = ((buff[10] << 16) | (buff[9] << 8) | buff[8]);
-		mpu9250_handle->raw_data.data_s_vector.temperature = ((buff[13] << 16) | (buff[12] << 8) | buff[11]);
-		ESP_ERROR_CHECK(mpu9250_baro_compensate(mpu9250_handle));
+		mpu9250_handle->baro.drdy = (buff[8] & BMP388_DRDY_PRESS_STATUS);
+		if((mpu9250_handle->baro.drdy)) {
+			mpu9250_handle->raw_data.data_s_vector.pressure = ((buff[11] << 16) | (buff[10] << 8) | buff[9]);
+			mpu9250_handle->raw_data.data_s_vector.temperature = ((buff[14] << 16) | (buff[13] << 8) | buff[12]);
+			ESP_ERROR_CHECK(mpu9250_baro_compensate(mpu9250_handle));
+		}
 	}
 	return ret;
 }
