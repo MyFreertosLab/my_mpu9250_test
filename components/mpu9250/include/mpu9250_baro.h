@@ -76,7 +76,7 @@
 #define BMP388_PWR_CTRL_NORMAL_MODE               0x30
 #define BMP388_DRDY_PRESS_STATUS                  0x10
 #define BMP388_DRDY_TEMP_STATUS                   0x20
-#define BMP388_SEA_LEVEL_PRESSURE_HPA             1013.25f
+#define BMP388_SEA_LEVEL_PRESSURE_HPA             1020.25f
 
 esp_err_t mpu9250_baro_test(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_baro_init(mpu9250_handle_t mpu9250_handle);
@@ -88,5 +88,8 @@ esp_err_t mpu9250_baro_set_output_data_rate(mpu9250_handle_t mpu9250_handle, uin
 esp_err_t mpu9250_baro_set_pwr_ctrl(mpu9250_handle_t mpu9250_handle, uint8_t value);
 esp_err_t mpu9250_baro_set_continuous_reading(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_baro_compensate(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_baro_update_state(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_baro_save_calibration_data(mpu9250_handle_t mpu9250_handle);
+esp_err_t mpu9250_baro_init_calibration_data(mpu9250_handle_t mpu9250_handle);
 
 #endif /* COMPONENTS_DRIVERS_MPU9250_INCLUDE_MPU9250_BARO_H_ */

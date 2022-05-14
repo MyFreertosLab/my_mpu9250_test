@@ -19,6 +19,7 @@
 #include <mpu9250_accel.h>
 #include <mpu9250_gyro.h>
 #include <mpu9250_mag.h>
+#include <mpu9250_baro.h>
 #include <mpu9250_calibrator.h>
 
 esp_err_t my_mpu9250_init_flash(){
@@ -75,6 +76,8 @@ void my_mpu9250_read_data_cycle(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_acc_set_fsr(mpu9250_handle, INV_FSR_8G));
     ESP_ERROR_CHECK(mpu9250_mag_set_mode2_with_precision(mpu9250_handle, INV_MAG_PRECISION_16_BITS));
 	ESP_ERROR_CHECK(mpu9250_mag_set_continuous_reading(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_baro_init_calibration_data(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_baro_set_continuous_reading(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_discard_messages(mpu9250_handle, 10000));
 
 	while (true) {
@@ -116,8 +119,8 @@ void my_mpu9250_task(void *arg) {
 
 	// Calibration
 	// calibration offset and biases
-//	ESP_ERROR_CHECK(mpu9250_calibrate(mpu9250_cal_handle));
-//	ESP_ERROR_CHECK(mpu9250_save_calibration_data(mpu9250_cal_handle));
+	ESP_ERROR_CHECK(mpu9250_calibrate(mpu9250_cal_handle));
+	ESP_ERROR_CHECK(mpu9250_save_calibration_data(mpu9250_cal_handle));
 
 	// load circular buffer
 	for(uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
@@ -125,6 +128,5 @@ void my_mpu9250_task(void *arg) {
 			ESP_ERROR_CHECK(mpu9250_load_raw_data(mpu9250_handle));
 		}
 	}
-
 	my_mpu9250_read_data_cycle(mpu9250_handle);
 }

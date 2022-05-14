@@ -484,6 +484,16 @@ typedef struct {
 } mpu9250_mag_cal_data_t;
 
 typedef struct {
+	uint8_t initialized;
+	uint32_t X,sample;
+	uint32_t R;
+	uint32_t variance;
+	uint32_t sqm;
+	uint32_t means;
+	double P,Q,K;
+} mpu9250_kalman_u32_t;
+
+typedef struct {
     uint16_t par_t1;
     uint16_t par_t2;
     int8_t par_t3;
@@ -512,6 +522,8 @@ typedef struct {
     double q_par_p9;
     double q_par_p10;
     double q_par_p11;
+    mpu9250_kalman_u32_t kalman_pressure;
+    mpu9250_kalman_u32_t kalman_temperature;
 } mpu9250_baro_cal_data_t;
 
 /* Circular Buffer */
