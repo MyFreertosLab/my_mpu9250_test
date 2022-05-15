@@ -77,6 +77,7 @@
 #define BMP388_DRDY_PRESS_STATUS                  0x10
 #define BMP388_DRDY_TEMP_STATUS                   0x20
 #define BMP388_SEA_LEVEL_PRESSURE_HPA             1020.25f
+#define BMP388_FREQUENCY_HZ                       50.0f
 
 esp_err_t mpu9250_baro_test(mpu9250_handle_t mpu9250_handle);
 esp_err_t mpu9250_baro_init(mpu9250_handle_t mpu9250_handle);

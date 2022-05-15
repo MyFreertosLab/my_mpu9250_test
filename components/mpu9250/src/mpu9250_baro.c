@@ -133,6 +133,18 @@ esp_err_t mpu9250_baro_parse_coefficients(mpu9250_handle_t mpu9250_handle, uint8
 	return ESP_OK;
 }
 
+static esp_err_t mpu9250_baro_init_kalman_vspeed_filter(mpu9250_handle_t mpu9250_handle) {
+	mpu9250_handle->baro.cal.kalman_vspeed.initialized = 0;
+	mpu9250_handle->baro.cal.kalman_vspeed.X = 0.0f;
+	mpu9250_handle->baro.cal.kalman_vspeed.sample = 0;
+	mpu9250_handle->baro.cal.kalman_vspeed.P = 1.0f;
+	mpu9250_handle->baro.cal.kalman_vspeed.Q = 1.2;
+	mpu9250_handle->baro.cal.kalman_vspeed.K = 0.0f;
+	mpu9250_handle->baro.cal.kalman_vspeed.R = 12534.28;
+	printf("BMP388::mpu9250_baro_init_kalman_vspeed_filter R[%3.3f]\n", mpu9250_handle->baro.cal.kalman_vspeed.R);
+	return ESP_OK;
+}
+
 static esp_err_t mpu9250_baro_init_kalman_temperature_filter(mpu9250_handle_t mpu9250_handle) {
 	mpu9250_handle->baro.cal.kalman_temperature.initialized = 0;
 	mpu9250_handle->baro.cal.kalman_temperature.X = 0.0f;
@@ -158,6 +170,7 @@ static esp_err_t mpu9250_baro_init_kalman_pressure_filter(mpu9250_handle_t mpu92
 }
 
 static esp_err_t mpu9250_baro_init_kalman_filter(mpu9250_handle_t mpu9250_handle) {
+	ESP_ERROR_CHECK(mpu9250_baro_init_kalman_vspeed_filter(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_baro_init_kalman_temperature_filter(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_baro_init_kalman_pressure_filter(mpu9250_handle));
 	return ESP_OK;
@@ -175,6 +188,8 @@ static esp_err_t mpu9250_baro_init_kalman_filter(mpu9250_handle_t mpu9250_handle
  *
  */
 static esp_err_t mpu9250_baro_prepare(mpu9250_handle_t mpu9250_handle) {
+	mpu9250_handle->baro.altitude = 0.0f;
+
 	ESP_ERROR_CHECK(mpu9250_baro_load_coefficients(mpu9250_handle));
 
 	ESP_ERROR_CHECK(mpu9250_baro_set_oversampling(mpu9250_handle, BMP388_NO_OVERSAMPLING, BMP388_OVERSAMPLING_8X));
@@ -240,10 +255,36 @@ static void mpu9250_baro_compensate_pressure(mpu9250_handle_t mpu9250_handle)
     mpu9250_handle->baro.pressure = partial_out1 + partial_out2 + partial_data4;
 }
 
+static esp_err_t mpu9250_baro_filter_data_vspeed(
+		mpu9250_handle_t mpu9250_handle) {
+	if (mpu9250_handle->baro.cal.kalman_vspeed.P > 0.01) {
+		mpu9250_cb_float_last(&mpu9250_handle->baro.cb_vspeed, &mpu9250_handle->baro.cal.kalman_vspeed.sample);
+		if (mpu9250_handle->baro.cal.kalman_vspeed.initialized == 0) {
+			mpu9250_handle->baro.cal.kalman_vspeed.initialized = 1;
+			mpu9250_handle->baro.cal.kalman_vspeed.X = mpu9250_handle->baro.cal.kalman_vspeed.sample;
+		}
+
+		mpu9250_handle->baro.cal.kalman_vspeed.P =
+				mpu9250_handle->baro.cal.kalman_vspeed.P
+						+ mpu9250_handle->baro.cal.kalman_vspeed.Q;
+		mpu9250_handle->baro.cal.kalman_vspeed.K =
+				mpu9250_handle->baro.cal.kalman_vspeed.P
+						/ (mpu9250_handle->baro.cal.kalman_vspeed.P
+								+ mpu9250_handle->baro.cal.kalman_vspeed.R);
+		mpu9250_handle->baro.cal.kalman_vspeed.X =
+				mpu9250_handle->baro.cal.kalman_vspeed.X
+						+ mpu9250_handle->baro.cal.kalman_vspeed.K
+								* (mpu9250_handle->baro.cal.kalman_vspeed.sample
+										- mpu9250_handle->baro.cal.kalman_vspeed.X);
+		mpu9250_handle->baro.cal.kalman_vspeed.P = (1
+				- mpu9250_handle->baro.cal.kalman_vspeed.K)
+				* mpu9250_handle->baro.cal.kalman_vspeed.P;
+	}
+	return ESP_OK;
+}
 static esp_err_t mpu9250_baro_filter_data_temperature(
 		mpu9250_handle_t mpu9250_handle) {
 	if (mpu9250_handle->baro.cal.kalman_temperature.P > 0.01) {
-//		mpu9250_cb_32_means(&mpu9250_handle->baro.cb_temperature, &mpu9250_handle->baro.cal.kalman_temperature.sample);
 		mpu9250_handle->baro.cal.kalman_temperature.sample = mpu9250_handle->raw_data.data_s_xyz.temperature;
 		if (mpu9250_handle->baro.cal.kalman_temperature.initialized == 0) {
 			mpu9250_handle->baro.cal.kalman_temperature.initialized = 1;
@@ -272,7 +313,6 @@ static esp_err_t mpu9250_baro_filter_data_temperature(
 static esp_err_t mpu9250_baro_filter_data_pressure(
 		mpu9250_handle_t mpu9250_handle) {
 	if (mpu9250_handle->baro.cal.kalman_pressure.P > 0.01) {
-//		mpu9250_cb_32_means(&mpu9250_handle->baro.cb_pressure, &mpu9250_handle->baro.cal.kalman_pressure.sample);
 		mpu9250_handle->baro.cal.kalman_pressure.sample = mpu9250_handle->raw_data.data_s_xyz.pressure;
 		if (mpu9250_handle->baro.cal.kalman_pressure.initialized == 0) {
 			mpu9250_handle->baro.cal.kalman_pressure.initialized = 1;
@@ -309,6 +349,7 @@ static esp_err_t mpu9250_baro_filter_data(mpu9250_handle_t mpu9250_handle) {
 esp_err_t mpu9250_baro_update_state(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_baro_filter_data(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_baro_compensate(mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_baro_filter_data_vspeed(mpu9250_handle));
 	return ESP_OK;
 }
 
@@ -407,7 +448,12 @@ esp_err_t mpu9250_baro_set_continuous_reading(mpu9250_handle_t mpu9250_handle) {
 
 esp_err_t mpu9250_baro_calc_altitude(mpu9250_handle_t mpu9250_handle) {
 	float atmospheric = mpu9250_handle->baro.pressure / 100.0F;
-	mpu9250_handle->baro.altitude = 44330.0 * (1.0 - pow(atmospheric / BMP388_SEA_LEVEL_PRESSURE_HPA, 0.1903));
+	float new_altitude = 44330.0 * (1.0 - pow(atmospheric / BMP388_SEA_LEVEL_PRESSURE_HPA, 0.1903));
+
+	if(mpu9250_handle->baro.altitude > 0.01 || mpu9250_handle->baro.altitude < -0.01 ) {
+		mpu9250_cb_float_add(&mpu9250_handle->baro.cb_vspeed, (new_altitude - mpu9250_handle->baro.altitude)*BMP388_FREQUENCY_HZ);
+	}
+	mpu9250_handle->baro.altitude = new_altitude;
 	return ESP_OK;
 }
 esp_err_t mpu9250_baro_compensate(mpu9250_handle_t mpu9250_handle) {

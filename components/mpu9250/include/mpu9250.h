@@ -494,6 +494,14 @@ typedef struct {
 } mpu9250_kalman_u32_t;
 
 typedef struct {
+	uint8_t initialized;
+	float X,sample;
+	float R;
+	float variance;
+	float P,Q,K;
+} mpu9250_kalman_float_t;
+
+typedef struct {
     uint16_t par_t1;
     uint16_t par_t2;
     int8_t par_t3;
@@ -524,6 +532,7 @@ typedef struct {
     double q_par_p11;
     mpu9250_kalman_u32_t kalman_pressure;
     mpu9250_kalman_u32_t kalman_temperature;
+    mpu9250_kalman_float_t kalman_vspeed;
 } mpu9250_baro_cal_data_t;
 
 /* Circular Buffer */
@@ -534,13 +543,12 @@ typedef struct {
 } mpu9250_cb_t;
 typedef mpu9250_cb_t* mpu9250_cb_handle_t;
 
-///* Circular Buffer */
-//#define CIRCULAR_BUFFER_SIZE_32 5
-//typedef struct {
-//	uint32_t data[CIRCULAR_BUFFER_SIZE_32];
-//	uint8_t cursor;
-//} mpu9250_cb_32_t;
-//typedef mpu9250_cb_32_t* mpu9250_cb_32_handle_t;
+/* Circular Buffer */
+typedef struct {
+	float data[CIRCULAR_BUFFER_SIZE];
+	uint8_t cursor;
+} mpu9250_cb_float_t;
+typedef mpu9250_cb_float_t* mpu9250_cb_float_handle_t;
 
 
 #define PI_2 6.283185307f
@@ -626,8 +634,7 @@ typedef struct mpu9250_baro_s {
 	float altitude;
 	uint8_t present;
     uint8_t drdy;
-//	mpu9250_cb_32_t cb_pressure; // circular buffer
-//	mpu9250_cb_32_t cb_temperature; // circular buffer
+	mpu9250_cb_float_t cb_vspeed; // circular buffer
 } mpu9250_baro_t;
 
 /*********************************
@@ -673,9 +680,9 @@ typedef mpu9250_init_t* mpu9250_handle_t;
 void mpu9250_cb_add(mpu9250_cb_handle_t cb, int16_t val);
 void mpu9250_cb_means(mpu9250_cb_handle_t cb, int16_t* mean);
 void mpu9250_cb_last(mpu9250_cb_handle_t cb, int16_t* val);
-//void mpu9250_cb_32_add(mpu9250_cb_32_handle_t cb, uint32_t val);
-//void mpu9250_cb_32_means(mpu9250_cb_32_handle_t cb, uint32_t* mean);
-//void mpu9250_cb_32_last(mpu9250_cb_32_handle_t cb, uint32_t* val);
+void mpu9250_cb_float_add(mpu9250_cb_float_handle_t cb, float val);
+void mpu9250_cb_float_means(mpu9250_cb_float_handle_t cb, float* mean);
+void mpu9250_cb_float_last(mpu9250_cb_float_handle_t cb, float* val);
 
 /* Public Methids */
 /* Set up APIs */
