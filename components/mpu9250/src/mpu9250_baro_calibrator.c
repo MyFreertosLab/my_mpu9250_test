@@ -146,7 +146,7 @@ static esp_err_t mpu9250_baro_cal_calc_bias(mpu9250_handle_t mpu9250_handle) {
 		mpu9250_handle->baro.cal.kalman_pressure.sqm = 0;
 		mpu9250_handle->baro.cal.kalman_temperature.sqm = 0;
 
-		ESP_ERROR_CHECK(mpu9250_baro_cal_calc_var(mpu9250_handle, MPU9250_BARO_CAL_MAX_KSAMPLE_CYCLES*5));
+		ESP_ERROR_CHECK(mpu9250_baro_cal_calc_var(mpu9250_handle, MPU9250_BARO_CAL_MAX_KSAMPLE_CYCLES));
 		ESP_ERROR_CHECK(mpu9250_baro_cal_calc_sqm(mpu9250_handle));
 
 	}
@@ -159,7 +159,7 @@ static esp_err_t mpu9250_baro_cal_calc_bias(mpu9250_handle_t mpu9250_handle) {
 esp_err_t mpu9250_baro_calibrate(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_baro_cal_init(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_baro_cal_discard_messages(mpu9250_handle, 2000));
-	ESP_ERROR_CHECK(mpu9250_baro_cal_calc_means(mpu9250_handle, MPU9250_BARO_CAL_MAX_KSAMPLE_CYCLES*5));
+	ESP_ERROR_CHECK(mpu9250_baro_cal_calc_means(mpu9250_handle, MPU9250_BARO_CAL_MAX_KSAMPLE_CYCLES));
 	ESP_ERROR_CHECK(mpu9250_baro_cal_calc_bias(mpu9250_handle));
 	return ESP_OK;
 }

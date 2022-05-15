@@ -138,7 +138,7 @@ static esp_err_t mpu9250_baro_init_kalman_temperature_filter(mpu9250_handle_t mp
 	mpu9250_handle->baro.cal.kalman_temperature.X = 0.0f;
 	mpu9250_handle->baro.cal.kalman_temperature.sample = 0;
 	mpu9250_handle->baro.cal.kalman_temperature.P = 1.0f;
-	mpu9250_handle->baro.cal.kalman_temperature.Q = 1.0;
+	mpu9250_handle->baro.cal.kalman_temperature.Q = 1.5;
 	mpu9250_handle->baro.cal.kalman_temperature.K = 0.0f;
 	mpu9250_handle->baro.cal.kalman_temperature.R = mpu9250_handle->baro.cal.kalman_temperature.variance;
 	printf("BMP388::mpu9250_baro_init_kalman_temperature_filter R[%d]\n", mpu9250_handle->baro.cal.kalman_temperature.R);
@@ -150,7 +150,7 @@ static esp_err_t mpu9250_baro_init_kalman_pressure_filter(mpu9250_handle_t mpu92
 	mpu9250_handle->baro.cal.kalman_pressure.X = 0.0f;
 	mpu9250_handle->baro.cal.kalman_pressure.sample = 0;
 	mpu9250_handle->baro.cal.kalman_pressure.P = 1.0f;
-	mpu9250_handle->baro.cal.kalman_pressure.Q = 1.0;
+	mpu9250_handle->baro.cal.kalman_pressure.Q = 1.5;
 	mpu9250_handle->baro.cal.kalman_pressure.K = 0.0f;
 	mpu9250_handle->baro.cal.kalman_pressure.R = mpu9250_handle->baro.cal.kalman_pressure.variance;
 	printf("BMP388::mpu9250_baro_init_kalman_pressure_filter R[%d]\n", mpu9250_handle->baro.cal.kalman_pressure.R);
@@ -196,7 +196,7 @@ static esp_err_t mpu9250_baro_prepare(mpu9250_handle_t mpu9250_handle) {
 
 static void mpu9250_baro_compensate_temperature(mpu9250_handle_t mpu9250_handle)
 {
-    uint32_t uncomp_temp = mpu9250_handle->raw_data.data_s_xyz.temperature;
+	uint32_t uncomp_temp = mpu9250_handle->baro.cal.kalman_temperature.X;
     double partial_data1;
     double partial_data2;
 
@@ -222,7 +222,7 @@ static void mpu9250_baro_compensate_pressure(mpu9250_handle_t mpu9250_handle)
     double partial_data4;
     double partial_out1;
     double partial_out2;
-    double dPressure = mpu9250_handle->raw_data.data_s_xyz.pressure;
+    double dPressure = mpu9250_handle->baro.cal.kalman_pressure.X;
 
     partial_data1 = mpu9250_handle->baro.cal.q_par_p6 * mpu9250_handle->baro.temperature;
     partial_data2 = mpu9250_handle->baro.cal.q_par_p7 * mpu9250_handle->baro.temperature*mpu9250_handle->baro.temperature;
@@ -238,17 +238,18 @@ static void mpu9250_baro_compensate_pressure(mpu9250_handle_t mpu9250_handle)
     partial_data3 = partial_data1 * partial_data2;
     partial_data4 = partial_data3 + dPressure*dPressure*dPressure * mpu9250_handle->baro.cal.q_par_p11;
     mpu9250_handle->baro.pressure = partial_out1 + partial_out2 + partial_data4;
-
 }
 
 static esp_err_t mpu9250_baro_filter_data_temperature(
 		mpu9250_handle_t mpu9250_handle) {
 	if (mpu9250_handle->baro.cal.kalman_temperature.P > 0.01) {
-		mpu9250_handle->baro.cal.kalman_temperature.sample = mpu9250_handle->raw_data.data_s_vector.temperature;
+//		mpu9250_cb_32_means(&mpu9250_handle->baro.cb_temperature, &mpu9250_handle->baro.cal.kalman_temperature.sample);
+		mpu9250_handle->baro.cal.kalman_temperature.sample = mpu9250_handle->raw_data.data_s_xyz.temperature;
 		if (mpu9250_handle->baro.cal.kalman_temperature.initialized == 0) {
 			mpu9250_handle->baro.cal.kalman_temperature.initialized = 1;
 			mpu9250_handle->baro.cal.kalman_temperature.X = mpu9250_handle->baro.cal.kalman_temperature.sample;
 		}
+
 		mpu9250_handle->baro.cal.kalman_temperature.P =
 				mpu9250_handle->baro.cal.kalman_temperature.P
 						+ mpu9250_handle->baro.cal.kalman_temperature.Q;
@@ -259,7 +260,7 @@ static esp_err_t mpu9250_baro_filter_data_temperature(
 		mpu9250_handle->baro.cal.kalman_temperature.X =
 				mpu9250_handle->baro.cal.kalman_temperature.X
 						+ mpu9250_handle->baro.cal.kalman_temperature.K
-								* (mpu9250_handle->baro.cal.kalman_temperature.sample
+								* (int32_t)(mpu9250_handle->baro.cal.kalman_temperature.sample
 										- mpu9250_handle->baro.cal.kalman_temperature.X);
 		mpu9250_handle->baro.cal.kalman_temperature.P = (1
 				- mpu9250_handle->baro.cal.kalman_temperature.K)
@@ -271,7 +272,8 @@ static esp_err_t mpu9250_baro_filter_data_temperature(
 static esp_err_t mpu9250_baro_filter_data_pressure(
 		mpu9250_handle_t mpu9250_handle) {
 	if (mpu9250_handle->baro.cal.kalman_pressure.P > 0.01) {
-		mpu9250_handle->baro.cal.kalman_pressure.sample = mpu9250_handle->raw_data.data_s_vector.pressure;
+//		mpu9250_cb_32_means(&mpu9250_handle->baro.cb_pressure, &mpu9250_handle->baro.cal.kalman_pressure.sample);
+		mpu9250_handle->baro.cal.kalman_pressure.sample = mpu9250_handle->raw_data.data_s_xyz.pressure;
 		if (mpu9250_handle->baro.cal.kalman_pressure.initialized == 0) {
 			mpu9250_handle->baro.cal.kalman_pressure.initialized = 1;
 			mpu9250_handle->baro.cal.kalman_pressure.X = mpu9250_handle->baro.cal.kalman_pressure.sample;
@@ -286,7 +288,7 @@ static esp_err_t mpu9250_baro_filter_data_pressure(
 		mpu9250_handle->baro.cal.kalman_pressure.X =
 				mpu9250_handle->baro.cal.kalman_pressure.X
 						+ mpu9250_handle->baro.cal.kalman_pressure.K
-								* (mpu9250_handle->baro.cal.kalman_pressure.sample
+								* (int32_t)(mpu9250_handle->baro.cal.kalman_pressure.sample
 										- mpu9250_handle->baro.cal.kalman_pressure.X);
 		mpu9250_handle->baro.cal.kalman_pressure.P = (1
 				- mpu9250_handle->baro.cal.kalman_pressure.K)

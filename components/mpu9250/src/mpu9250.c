@@ -57,7 +57,27 @@ void mpu9250_cb_means(mpu9250_cb_handle_t cb, int16_t *mean) {
 void mpu9250_cb_last(mpu9250_cb_handle_t cb, int16_t *val) {
 	*val = cb->data[cb->cursor];
 }
-
+//
+//void mpu9250_cb_32_init(mpu9250_cb_32_handle_t cb) {
+//	cb->cursor = -1;
+//	memset(cb, 0, sizeof(mpu9250_cb_32_t));
+//}
+//
+//void mpu9250_cb_32_add(mpu9250_cb_32_handle_t cb, uint32_t val) {
+//	cb->cursor++;
+//	cb->cursor %= CIRCULAR_BUFFER_SIZE_32;
+//	cb->data[cb->cursor] = val;
+//}
+//void mpu9250_cb_32_means(mpu9250_cb_32_handle_t cb, uint32_t* mean) {
+//	uint64_t sum = 0;
+//	for (uint8_t i = 0; i < CIRCULAR_BUFFER_SIZE_32; i++) {
+//		sum += cb->data[i];
+//	}
+//	*mean = sum / CIRCULAR_BUFFER_SIZE_32;
+//}
+//void mpu9250_cb_32_last(mpu9250_cb_32_handle_t cb, uint32_t* val) {
+//	*val = cb->data[cb->cursor];
+//}
 /************************************************************************
  ****************** A P I  I M P L E M E N T A T I O N ******************
  ************************************************************************/
@@ -70,6 +90,8 @@ esp_err_t mpu9250_init(mpu9250_handle_t mpu9250_handle) {
 		mpu9250_cb_init(&mpu9250_handle->accel.cb[i]);
 		mpu9250_cb_init(&mpu9250_handle->gyro.cb[i]);
 	}
+//	mpu9250_cb_32_init(&mpu9250_handle->baro.cb_pressure);
+//	mpu9250_cb_32_init(&mpu9250_handle->baro.cb_temperature);
 
 	// TODO: must start with reset mpu9250
 	ESP_ERROR_CHECK(
@@ -244,6 +266,8 @@ esp_err_t mpu9250_load_raw_data(mpu9250_handle_t mpu9250_handle) {
 		if((mpu9250_handle->baro.drdy)) {
 			mpu9250_handle->raw_data.data_s_vector.pressure = ((buff[11] << 16) | (buff[10] << 8) | buff[9]);
 			mpu9250_handle->raw_data.data_s_vector.temperature = ((buff[14] << 16) | (buff[13] << 8) | buff[12]);
+//			mpu9250_cb_32_add(&mpu9250_handle->baro.cb_pressure, mpu9250_handle->raw_data.data_s_vector.pressure);
+//			mpu9250_cb_32_add(&mpu9250_handle->baro.cb_temperature, mpu9250_handle->raw_data.data_s_vector.temperature);
 		}
 	}
 	return ret;
@@ -322,7 +346,7 @@ esp_err_t mpu9250_update_state(mpu9250_handle_t mpu9250_handle) {
 	ESP_ERROR_CHECK(mpu9250_gyro_update_state(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_mag_update_state(mpu9250_handle));
 	ESP_ERROR_CHECK(mpu9250_calc_rpy(mpu9250_handle));
-	if(mpu9250_handle->baro.present) {
+	if(mpu9250_handle->baro.present && mpu9250_handle->baro.drdy) {
 		ESP_ERROR_CHECK(mpu9250_baro_update_state(mpu9250_handle));
 	}
 

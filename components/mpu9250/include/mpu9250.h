@@ -534,6 +534,15 @@ typedef struct {
 } mpu9250_cb_t;
 typedef mpu9250_cb_t* mpu9250_cb_handle_t;
 
+///* Circular Buffer */
+//#define CIRCULAR_BUFFER_SIZE_32 5
+//typedef struct {
+//	uint32_t data[CIRCULAR_BUFFER_SIZE_32];
+//	uint8_t cursor;
+//} mpu9250_cb_32_t;
+//typedef mpu9250_cb_32_t* mpu9250_cb_32_handle_t;
+
+
 #define PI_2 6.283185307f
 #define PI 3.141592654f
 #define PI_HALF 1.570796327f
@@ -617,6 +626,8 @@ typedef struct mpu9250_baro_s {
 	float altitude;
 	uint8_t present;
     uint8_t drdy;
+//	mpu9250_cb_32_t cb_pressure; // circular buffer
+//	mpu9250_cb_32_t cb_temperature; // circular buffer
 } mpu9250_baro_t;
 
 /*********************************
@@ -662,6 +673,9 @@ typedef mpu9250_init_t* mpu9250_handle_t;
 void mpu9250_cb_add(mpu9250_cb_handle_t cb, int16_t val);
 void mpu9250_cb_means(mpu9250_cb_handle_t cb, int16_t* mean);
 void mpu9250_cb_last(mpu9250_cb_handle_t cb, int16_t* val);
+//void mpu9250_cb_32_add(mpu9250_cb_32_handle_t cb, uint32_t val);
+//void mpu9250_cb_32_means(mpu9250_cb_32_handle_t cb, uint32_t* mean);
+//void mpu9250_cb_32_last(mpu9250_cb_32_handle_t cb, uint32_t* val);
 
 /* Public Methids */
 /* Set up APIs */
