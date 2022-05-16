@@ -252,17 +252,17 @@ esp_err_t mpu9250_calibrate(mpu9250_cal_handle_t mpu9250_cal_handle) {
 	ESP_ERROR_CHECK(mpu9250_cal_init(mpu9250_cal_handle));
 	ESP_ERROR_CHECK(mpu9250_cal_discard_messages(mpu9250_cal_handle->mpu9250_handle, 10000));
 
-//	ESP_ERROR_CHECK(mpu9250_acc_gyro_calibrate(mpu9250_cal_handle));
-//	ESP_ERROR_CHECK(mpu9250_mag_calibrate(mpu9250_cal_handle->mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_acc_gyro_calibrate(mpu9250_cal_handle));
+	ESP_ERROR_CHECK(mpu9250_mag_calibrate(mpu9250_cal_handle->mpu9250_handle));
 	if(mpu9250_cal_handle->mpu9250_handle->baro.present) {
 		ESP_ERROR_CHECK(mpu9250_baro_calibrate(mpu9250_cal_handle->mpu9250_handle));
 	}
 	return ESP_OK;
 }
 esp_err_t mpu9250_save_calibration_data(mpu9250_cal_handle_t mpu9250_cal_handle) {
-//	ESP_ERROR_CHECK(mpu9250_acc_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
-//	ESP_ERROR_CHECK(mpu9250_gyro_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
-//	ESP_ERROR_CHECK(mpu9250_mag_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_acc_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_gyro_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
+	ESP_ERROR_CHECK(mpu9250_mag_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
 	if(mpu9250_cal_handle->mpu9250_handle->baro.present) {
 		ESP_ERROR_CHECK(mpu9250_baro_save_calibration_data(mpu9250_cal_handle->mpu9250_handle));
 	}

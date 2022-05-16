@@ -140,7 +140,7 @@ static esp_err_t mpu9250_baro_init_kalman_vspeed_filter(mpu9250_handle_t mpu9250
 	mpu9250_handle->baro.cal.kalman_vspeed.P = 1.0f;
 	mpu9250_handle->baro.cal.kalman_vspeed.Q = 1.2;
 	mpu9250_handle->baro.cal.kalman_vspeed.K = 0.0f;
-	mpu9250_handle->baro.cal.kalman_vspeed.R = 12534.28;
+	mpu9250_handle->baro.cal.kalman_vspeed.R = 32534.28;
 	printf("BMP388::mpu9250_baro_init_kalman_vspeed_filter R[%3.3f]\n", mpu9250_handle->baro.cal.kalman_vspeed.R);
 	return ESP_OK;
 }
